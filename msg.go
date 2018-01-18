@@ -1,12 +1,14 @@
 package main
 
-func processMessage(msg MsgPayload) {
+import "github.com/gorilla/websocket"
+
+func processMessage(msg MsgPayload, conn *websocket.Conn) {
 
 	if funcToExecute, ok := Messages[msg.Message]; ok {
-		funcToExecute(msg.Data)
+		funcToExecute(msg.Data, conn)
 	}
 
 	// rerender the view
-	renderView()
+	renderView(conn)
 
 }

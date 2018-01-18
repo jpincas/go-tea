@@ -18,8 +18,7 @@ type Model struct {
 
 var State Model
 var Templates *template.Template
-var Messages map[string]func(map[string]interface{})
-var WSCX *websocket.Conn
+var Messages map[string]func(map[string]interface{}, *websocket.Conn)
 
 func init() {
 
@@ -27,7 +26,7 @@ func init() {
 	Templates = template.Must(template.New("main").ParseGlob("components/**/*.html"))
 
 	// init the message map
-	Messages = map[string]func(map[string]interface{}){
+	Messages = map[string]func(map[string]interface{}, *websocket.Conn){
 		"flipcard":      flipCard,
 		"flipAllBack":   flipAllBack,
 		"removeMatches": removeMatches,
@@ -36,9 +35,9 @@ func init() {
 	// declare the inital state of the model
 	// on startup
 	State = Model{
-		Deck:              newDeck(100),
+		Deck:              newDeck(10),
 		TurnsTaken:        0,
-		LastAttemptedCard: 101, //hack
+		LastAttemptedCard: 11, //hack
 		Score:             0,
 	}
 }

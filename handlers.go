@@ -24,11 +24,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		log.Print("upgrade:", err)
 		return
 	}
-	WSCX = conn
+
 	defer conn.Close()
 
 	// initial view render
-	renderView()
+	renderView(conn)
 
 	for {
 
@@ -44,14 +44,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("unmarshalling error:", err)
 		}
 
-		processMessage(msg)
+		processMessage(msg, conn)
 
 	}
 }
 
-func renderView() {
+func renderView(conn *websocket.Conn) {
 	tpl := bytes.Buffer{}
 	Templates.ExecuteTemplate(&tpl, "view.html", State)
 
-	WSCX.WriteMessage(1, tpl.Bytes())
+	conn.WriteMessage(1, tpl.Bytes())
 }

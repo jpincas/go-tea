@@ -3,6 +3,8 @@ package main
 import (
 	"math/rand"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 type Card struct {
@@ -31,7 +33,7 @@ func (deck Deck) flipCard(i int) {
 	deck[i].Flipped = !deck[i].Flipped
 }
 
-func flipCard(params map[string]interface{}) {
+func flipCard(params map[string]interface{}, conn *websocket.Conn) {
 	cardToFlip := int(params["cardIndex"].(float64))
 	State.Deck.flipCard(cardToFlip)
 
@@ -42,19 +44,19 @@ func flipCard(params map[string]interface{}) {
 			State.Score++
 			go func() {
 				time.Sleep(1500 * time.Millisecond)
-				processMessage(MsgPayload{"removeMatches", params})
+				processMessage(MsgPayload{"removeMatches", params}, conn)
 			}()
 		} else {
 			go func() {
 				time.Sleep(1500 * time.Millisecond)
-				processMessage(MsgPayload{"flipAllBack", params})
+				processMessage(MsgPayload{"flipAllBack", params}, conn)
 			}()
 		}
 	}
 
 }
 
-func flipAllBack(params map[string]interface{}) {
+func flipAllBack(params map[string]interface{}, conn *websocket.Conn) {
 	State.Deck.flipAllBack()
 }
 
@@ -85,7 +87,7 @@ func (deck Deck) hasFoundMatch() bool {
 	return false
 }
 
-func removeMatches(params map[string]interface{}) {
+func removeMatches(params map[string]interface{}, conn *websocket.Conn) {
 	State.Deck.removeMatches()
 }
 
