@@ -1,8 +1,17 @@
 <div id="deck">
     {{ range $index, $card := . }}
-    <div class='card-container' {{ if not $card.Matched }} onclick='sendMessage("flipcard", { "cardIndex": {{ $index }} })' 
-    {{ end }}>
-        {{ template "card.html" $card }}
-    </div>
+
+        <div class="card-container">
+            {{ template "card.html" $card }}
+            
+            {{ if not $card.Matched }}
+                <button class="flipcard gotea-click"  
+                    data-message='flipcard'
+                    data-tag='{ "cardIndex": {{ $index }} }'>
+                    Flip
+                </button>
+            {{ end }}
+        </div>
+       
     {{ end }}
 </div>

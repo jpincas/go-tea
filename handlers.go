@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 
 	"github.com/gorilla/websocket"
-	"github.com/unrolled/render"
 )
 
 var upgrader = websocket.Upgrader{}
@@ -50,13 +49,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func index(w http.ResponseWriter, r *http.Request) {
-	rd := render.New()
-	rd.HTML(w, http.StatusOK, "index", nil)
-}
-
 func renderView() {
 	tpl := bytes.Buffer{}
 	Templates.ExecuteTemplate(&tpl, "view.html", State)
+
 	WSCX.WriteMessage(1, tpl.Bytes())
 }

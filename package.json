@@ -1,0 +1,27 @@
+{
+  "name": "go-tea",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "parcel build index.html --public-url ./ --no-minify"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jpincas/go-tea.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jpincas/go-tea/issues"
+  },
+  "homepage": "https://github.com/jpincas/go-tea#readme",
+  "dependencies": {
+    "html-to-vdom": "^0.7.0",
+    "picodom": "^1.0.2",
+    "skatejs-dom-diff": "^1.0.0",
+    "snabbdom": "^0.7.1",
+    "virtual-dom": "^2.1.1"
+  }
+}

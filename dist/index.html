@@ -6,20 +6,8 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Document</title>
 
-    <script>
-        var socket = new WebSocket("ws://localhost:8080/server");
+    <script src="go-tea.js"></script>
 
-        socket.onmessage = function (event) {
-            document.getElementById("target").innerHTML = event.data;
-        }
-
-        function sendMessage(message, data) {
-            const payload = ({ message, data })
-            console.log("Sending websocket message: ", payload)
-            socket.send(JSON.stringify(payload))
-        }
-
-    </script>
 
     <style>
         #deck {
@@ -28,14 +16,14 @@
         }
 
         .card-container {
-            width: 150px;
-            height: 250px;
-            margin: 5px;
+            display: flex;
+            flex-direction: column;
         }
 
         .card {
-            width: 100%;
-            height: 100%;
+            width: 150px;
+            height: 250px;
+            margin: 5px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -64,7 +52,7 @@
 
 <body>
 
-    <div id="target"></div>
+    <div id="view"></div>
 
 </body>
 

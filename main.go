@@ -44,8 +44,12 @@ func init() {
 }
 
 func main() {
+
+	fs := http.FileServer(http.Dir("dist"))
+
 	http.HandleFunc("/server", handler)
-	http.HandleFunc("/", index)
+	http.Handle("/", fs)
+
 	log.Println("Staring server...")
 	http.ListenAndServe(":8080", nil)
 }
