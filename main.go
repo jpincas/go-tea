@@ -36,9 +36,9 @@ func init() {
 	// declare the inital state of the model
 	// on startup
 	State = Model{
-		Deck:              newDeck(10),
+		Deck:              newDeck(100),
 		TurnsTaken:        0,
-		LastAttemptedCard: 11, //hack
+		LastAttemptedCard: 101, //hack
 		Score:             0,
 	}
 }

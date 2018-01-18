@@ -41,12 +41,12 @@ func flipCard(params map[string]interface{}) {
 		if State.Deck.hasFoundMatch() {
 			State.Score++
 			go func() {
-				time.Sleep(500 * time.Millisecond)
+				time.Sleep(1500 * time.Millisecond)
 				processMessage(MsgPayload{"removeMatches", params})
 			}()
 		} else {
 			go func() {
-				time.Sleep(500 * time.Millisecond)
+				time.Sleep(1500 * time.Millisecond)
 				processMessage(MsgPayload{"flipAllBack", params})
 			}()
 		}
