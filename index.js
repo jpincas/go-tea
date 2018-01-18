@@ -10,7 +10,11 @@ var patch = snabbdom.init([
 var h = require("snabbdom/h").default; // helper function for creating vnodes
 var toVNode = require("snabbdom/tovnode").default;
 
-var socket = new WebSocket("ws://localhost:8080/server");
+var socket = new WebSocket(
+  (window.location.protocol === "https:" ? "wss://" : "ws://") +
+    window.location.host +
+    "/server"
+);
 
 var container;
 var oldNode;
