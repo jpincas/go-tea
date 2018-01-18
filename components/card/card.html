@@ -1,0 +1,3 @@
+<div class="card {{ if .Flipped }}faceup{{ else }}facedown{{ end }} {{ if .Matched }}matched{{ else }}unmatched{{ end }}">
+    <span class="value">{{ if .Flipped }} {{ .Value }} {{ end }}</span>
+</div>

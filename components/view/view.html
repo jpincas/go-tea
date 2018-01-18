@@ -1,0 +1,6 @@
+<h1>Card Memory Game</h1>
+<h2>Turns Taken: {{ .TurnsTaken }} Pairs Found: {{ .Score }}</h2>
+
+{{ if .HasWon }} Well Done! You Won! {{ end }} 
+
+{{ template "deck.html" .Deck }}

@@ -1,0 +1,8 @@
+<div id="deck">
+    {{ range $index, $card := . }}
+    <div class='card-container' {{ if not $card.Matched }} onclick='sendMessage("flipcard", { "cardIndex": {{ $index }} })' 
+    {{ end }}>
+        {{ template "card.html" $card }}
+    </div>
+    {{ end }}
+</div>
