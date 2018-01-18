@@ -1034,8 +1034,8 @@ socket.onmessage = function(event) {
 };
 
 function sendMessage(element) {
-  const message = element.srcElement.dataset.message;
-  const data = JSON.parse(element.srcElement.dataset.tag);
+  const message = element.target.dataset.message;
+  const data = JSON.parse(element.target.dataset.tag);
 
   const payload = { message, data };
   console.log("Sending websocket message: ", payload);
