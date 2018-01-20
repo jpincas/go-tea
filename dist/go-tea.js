@@ -973,7 +973,7 @@ function toVNode(node, domApi) {
         for (i = 0, n = elmAttrs.length; i < n; i++) {
             name_1 = elmAttrs[i].nodeName;
             if (name_1 !== 'id' && name_1 !== 'class') {
-                attrs[name_1] = elmAttrs[i].nodeValue;
+                attrs[name_1] = elmAttrs[i].value;
             }
         }
         for (i = 0, n = elmChildren.length; i < n; i++) {
@@ -1038,8 +1038,8 @@ socket.onmessage = function(event) {
 };
 
 function sendMessage(element) {
-  const message = element.srcElement.dataset.message;
-  const data = JSON.parse(element.srcElement.dataset.tag);
+  const message = element.target.dataset.message;
+  const data = JSON.parse(element.target.dataset.tag);
 
   const payload = { message, data };
   console.log("Sending websocket message: ", payload);
