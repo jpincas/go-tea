@@ -95,7 +95,7 @@ function primitive(s) {
   return typeof s === 'string' || typeof s === 'number';
 }
 //# sourceMappingURL=is.js.map
-},{}],16:[function(require,module,exports) {
+},{}],15:[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -165,7 +165,7 @@ var htmlDomApi = exports.htmlDomApi = {
 };
 exports.default = htmlDomApi;
 //# sourceMappingURL=htmldomapi.js.map
-},{}],15:[function(require,module,exports) {
+},{}],16:[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -287,7 +287,7 @@ var thunk = exports.thunk = function thunk(sel, key, fn, args) {
 };
 exports.default = thunk;
 //# sourceMappingURL=thunk.js.map
-},{"./h":15}],12:[function(require,module,exports) {
+},{"./h":16}],12:[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -608,7 +608,7 @@ function init(modules, domApi) {
   };
 }
 //# sourceMappingURL=snabbdom.js.map
-},{"./vnode":13,"./is":14,"./htmldomapi":16,"./h":15,"./thunk":17}],5:[function(require,module,exports) {
+},{"./vnode":13,"./is":14,"./htmldomapi":15,"./h":16,"./thunk":17}],8:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function updateClass(oldVnode, vnode) {
@@ -661,7 +661,7 @@ function updateProps(oldVnode, vnode) {
 exports.propsModule = { create: updateProps, update: updateProps };
 exports.default = exports.propsModule;
 //# sourceMappingURL=props.js.map
-},{}],7:[function(require,module,exports) {
+},{}],3:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var raf = (typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout;
@@ -748,7 +748,7 @@ exports.styleModule = {
 };
 exports.default = exports.styleModule;
 //# sourceMappingURL=style.js.map
-},{}],8:[function(require,module,exports) {
+},{}],7:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var xlinkNS = 'http://www.w3.org/1999/xlink';
@@ -815,7 +815,7 @@ function vnode(sel, data, children, text, elm) {
 exports.vnode = vnode;
 exports.default = vnode;
 //# sourceMappingURL=vnode.js.map
-},{}],11:[function(require,module,exports) {
+},{}],10:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.array = Array.isArray;
@@ -824,7 +824,7 @@ function primitive(s) {
 }
 exports.primitive = primitive;
 //# sourceMappingURL=is.js.map
-},{}],3:[function(require,module,exports) {
+},{}],4:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var vnode_1 = require("./vnode");
@@ -884,7 +884,7 @@ exports.h = h;
 ;
 exports.default = h;
 //# sourceMappingURL=h.js.map
-},{"./vnode":9,"./is":11}],10:[function(require,module,exports) {
+},{"./vnode":9,"./is":10}],11:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function createElement(tagName) {
@@ -951,7 +951,7 @@ exports.htmlDomApi = {
 };
 exports.default = exports.htmlDomApi;
 //# sourceMappingURL=htmldomapi.js.map
-},{}],4:[function(require,module,exports) {
+},{}],5:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var vnode_1 = require("./vnode");
@@ -996,7 +996,7 @@ function toVNode(node, domApi) {
 exports.toVNode = toVNode;
 exports.default = toVNode;
 //# sourceMappingURL=tovnode.js.map
-},{"./vnode":9,"./htmldomapi":10}],2:[function(require,module,exports) {
+},{"./vnode":9,"./htmldomapi":11}],2:[function(require,module,exports) {
 var snabbdom = require("snabbdom");
 var patch = snabbdom.init([
   // Init patch function with chosen modules
@@ -1038,11 +1038,11 @@ socket.onmessage = function(event) {
 };
 
 function sendMessage(element) {
-  const message = element.srcElement.dataset.message;
-  var tag = element.srcElement.dataset.tag;
-  const data = {};
+  const message = element.target.dataset.message;
+  var tag = element.target.dataset.tag;
+  let data = {};
   if (tag) {
-    data = JSON.parse(element.srcElement.dataset.tag);
+    data = JSON.parse(element.target.dataset.tag);
   }
 
   const payload = { message, data };
@@ -1060,4 +1060,4 @@ document.addEventListener(
   false
 );
 
-},{"snabbdom":12,"snabbdom/modules/class":5,"snabbdom/modules/props":6,"snabbdom/modules/style":7,"snabbdom/modules/attributes":8,"snabbdom/h":3,"snabbdom/tovnode":4}]},{},[2])
+},{"snabbdom":12,"snabbdom/modules/class":8,"snabbdom/modules/props":6,"snabbdom/modules/style":3,"snabbdom/modules/attributes":7,"snabbdom/h":4,"snabbdom/tovnode":5}]},{},[2])
