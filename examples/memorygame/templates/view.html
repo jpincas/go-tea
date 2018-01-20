@@ -1,6 +1,43 @@
+<style>
+    #deck {
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    .card-container {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card {
+        width: 150px;
+        height: 250px;
+        margin: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid grey;
+        border-radius: 5px;
+    }
+
+    .card.unmatched {
+        cursor: pointer;
+    }
+
+    .card .value {
+        font-size: 5em;
+    }
+
+    .card.facedown {
+        background-color: cornflowerblue;
+    }
+
+    .card.facedown.card.matched {
+        background-color: green;
+    }
+</style>
+
 <h1>Card Memory Game</h1>
 <h2>Turns Taken: {{ .TurnsTaken }} Pairs Found: {{ .Score }}</h2>
 
-{{ if .HasWon }} Well Done! You Won! {{ end }} 
-
-{{ template "deck.html" .Deck }}
+{{ if .HasWon }} Well Done! You Won! {{ end }} {{ template "deck.html" .Deck }}

@@ -25,9 +25,11 @@ import (
 
 // Application is the top-level representation of your application
 type Application struct {
-	Templates *template.Template
-	Messages  map[string]func(map[string]interface{}, *Session)
-	Sessions  SessionStore
+	// template for rendering framework errors
+	ErrorTemplate *template.Template
+	Templates     *template.Template
+	Messages      map[string]func(map[string]interface{}, *Session)
+	Sessions      SessionStore
 }
 
 // App instantiates a new application and makes it globally available
@@ -42,6 +44,14 @@ func init() {
 
 	// initialise the session store
 	App.Sessions = SessionStore{}
+
+	// parse the framework error template
+	App.ErrorTemplate = template.Must(template.New("error").Parse(`
+		<h1>Whoops!</h1>
+		<h2>There was a gotea runtime error</h2>
+		<hr />
+		<p>{{ .ErrorMessage }}</p>
+		`))
 }
 
 // SESSION
@@ -65,8 +75,7 @@ func newSession(conn *websocket.Conn) (*Session, error) {
 	// new session ID
 	u2, err := uuid.NewV4()
 	if err != nil {
-		fmt.Printf("Something went wrong: %s", err)
-		return nil, err
+		renderError(conn, err)
 	}
 
 	// create the session and save it
@@ -95,13 +104,34 @@ func (session *Session) removeConnection() {
 // render takes the session state, runs it through the main view template
 // and renders it to the socket connection on the session
 func (session *Session) render() {
-	tpl := bytes.Buffer{}
-	App.Templates.ExecuteTemplate(&tpl, "view.html", session.State)
 	if session.Conn == nil {
 		// Oops! There's no socket connection
 		log.Println("Could not render, no socket to render to")
+		return
 	}
+	tpl := bytes.Buffer{}
+	App.Templates.ExecuteTemplate(&tpl, "view.html", session.State)
 	session.Conn.WriteMessage(1, tpl.Bytes())
+}
+
+// ERRORS
+
+func renderError(conn *websocket.Conn, err error) {
+	if conn == nil {
+		// Oops! There's no socket connection
+		log.Println("Could not render, no socket to render to")
+		return
+	}
+	tpl := bytes.Buffer{}
+
+	templateData := struct {
+		ErrorMessage string
+	}{
+		err.Error(),
+	}
+
+	App.ErrorTemplate.Execute(&tpl, templateData)
+	conn.WriteMessage(1, tpl.Bytes())
 }
 
 // HANDLER
@@ -124,7 +154,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: error handling
-	session, _ := newSession(conn)
+	session, err := newSession(conn)
+	if err != nil {
+		renderError(conn, err)
+	}
 
 	// defer closing the connection and removing it from the session
 	defer conn.Close()
@@ -135,17 +168,19 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-			log.Println("read:", err)
+			renderError(conn, err)
 			break
 		}
 
 		var msg Msg
 		err = json.Unmarshal(message, &msg)
 		if err != nil {
-			fmt.Println("unmarshalling error:", err)
+			renderError(conn, err)
 		}
 
-		msg.Process(session)
+		if err := msg.Process(session); err != nil {
+			renderError(conn, err)
+		}
 
 	}
 }
