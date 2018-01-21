@@ -40,13 +40,13 @@ socket.onmessage = function(event) {
 
 function sendMessage(element) {
   const message = element.target.dataset.message;
-  var tag = element.target.dataset.tag;
-  let data = {};
-  if (tag) {
-    data = JSON.parse(element.target.dataset.tag);
+  var _tag = element.target.dataset.tag;
+  let tag = {};
+  if (_tag) {
+    tag = JSON.parse(_tag);
   }
 
-  const payload = { message, data };
+  const payload = { message, tag };
   console.log("Sending websocket message: ", payload);
   socket.send(JSON.stringify(payload));
 }

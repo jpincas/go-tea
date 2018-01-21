@@ -12,11 +12,11 @@ type Deck []Card
 
 // Messages
 
-func flipAllBack(params map[string]interface{}, s *gotea.Session) {
+func flipAllBack(params gotea.MsgTag, s *gotea.Session) {
 	s.State.(Model).Deck.flipAllBack()
 }
 
-func removeMatches(params map[string]interface{}, s *gotea.Session) {
+func removeMatches(params gotea.MsgTag, s *gotea.Session) {
 	s.State.(Model).Deck.removeMatches()
 }
 

@@ -14,15 +14,11 @@ type Model struct {
 }
 
 func init() {
-	// Initialise the message map
-	// - REQUIRED by gotea runtime
-	// - but you could also add to this map in other files
-	// - e.g. App.Messages["newMessage"] = newFunction
-	gotea.App.Messages = map[string]func(map[string]interface{}, *gotea.Session){
-		"flipcard":      flipCard,
-		"flipAllBack":   flipAllBack,
-		"removeMatches": removeMatches,
-	}
+
+	// set messages
+	gotea.App.Messages["flipcard"] = flipCard
+	gotea.App.Messages["flipAllBack"] = flipAllBack
+	gotea.App.Messages["removeMatches"] = removeMatches
 
 	// create a seed for initial session state
 	gotea.App.InitialSessionState = Model{

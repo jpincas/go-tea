@@ -16,13 +16,8 @@ type Model struct {
 }
 
 func init() {
-	// Initialise the message map
-	// - REQUIRED by gotea runtime
-	// - but you could also add to this map in other files
-	// - e.g. App.Messages["newMessage"] = newFunction
-	gotea.App.Messages = map[string]func(map[string]interface{}, *gotea.Session){
-		"add-coordinate": addCoordinate,
-	}
+
+	gotea.App.Messages["add-coordinate"] = addCoordinate
 
 	// create a seed for initial session state
 	gotea.App.InitialSessionState = Model{
@@ -41,7 +36,7 @@ type Coordinate struct {
 var CoordinateDB []Coordinate
 
 // addCoordinate adds a random coordinate to the database
-func addCoordinate(params map[string]interface{}, s *gotea.Session) {
+func addCoordinate(_ gotea.MsgTag, s *gotea.Session) {
 	// create new coordinate, add to 'database'
 	x := rand.Intn(100)
 	y := rand.Intn(100)
