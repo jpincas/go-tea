@@ -1,15 +1,28 @@
 <style>
 </style>
 
-<h1>Please input your password twice.</h1>
+<h1>Evil(ish) Password Validator.</h1>
 
-<input type="text" class="gotea-input" data-message="input-password-one" />
-<input type="text" class="gotea-input" data-message="input-password-two" />
+This is really just an example of dealing with input boxes.
+Please do not implement such password rules.
 
-{{ if (ne .PasswordOne .PasswordTwo) }}
-    Passwords do not match.
-{{ end }} 
 
-Password one is: {{.PasswordOne}}
-Password two is: {{.PasswordTwo}}
+<div>
+    <input type="text" class="gotea-input" data-message="input-password-one" />
+    <div>
+        <ul>
+            {{ range $error := .PasswordErrors }}
+                <li>{{$error}}</li>
+            {{ end }}
+        </ul>
+    </div>
+</div>
 
+<div>
+    <input type="text" class="gotea-input" data-message="input-password-two" />
+    <div>
+        {{ if (ne .PasswordOne .PasswordTwo) }}
+            Passwords do not match.
+        {{ end }} 
+    </div>
+</div>

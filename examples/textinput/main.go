@@ -1,6 +1,7 @@
 package main
 
 import (
+	s "strings"
 	gotea "github.com/jpincas/go-tea"
 )
 
@@ -39,6 +40,31 @@ func inputPasswordTwo(params gotea.MsgTag, s *gotea.Session) {
 	pointerToCastModel := &castModel
 	pointerToCastModel.PasswordTwo = params["input"].(string)
 	s.State = *pointerToCastModel
+}
+
+func (model Model) PasswordErrors() []string {
+	errors := make([]string, 0)
+
+	if len(model.PasswordOne) < 8{
+		errors = append(errors, "Password must be more than 8 characters long.")
+	}
+	if len(model.PasswordOne) > 10{
+		errors = append(errors, "Password must be 10 characters or fewer")
+	}
+	if s.ToLower(model.PasswordOne) == model.PasswordOne {
+		errors = append(errors, "Password must contain one upper-case letter")
+	}
+	if s.ToUpper(model.PasswordOne) == model.PasswordOne {
+		errors = append(errors, "Password must contain one lower-case letter")
+	}
+	if !(s.ContainsAny(model.PasswordOne, "0123456789")) {
+		errors = append(errors, "Password must contain a number")
+	}
+	symbols := "!@%^&*;,."
+	if !(s.ContainsAny(model.PasswordOne, symbols)) {
+		errors = append(errors, "Password must contain one of the following symbols: " + symbols)
+	}
+	return errors
 }
 
 
