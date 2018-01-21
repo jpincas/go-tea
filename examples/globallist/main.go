@@ -1,6 +1,10 @@
 package main
 
-import "math/rand"
+import (
+	"math/rand"
+
+	gotea "github.com/jpincas/go-tea"
+)
 
 // Model is the data to be maintained as state
 // - REQUIRED by gotea runtime
@@ -13,7 +17,7 @@ type Model struct {
 
 // InitialState should return an intial model
 // - REQUIRED by gotea runtime
-func initialState() Model {
+func (m Model) initialState() Model {
 	return Model{
 		Coordinates: &CoordinateDB,
 	}
@@ -24,9 +28,15 @@ func init() {
 	// - REQUIRED by gotea runtime
 	// - but you could also add to this map in other files
 	// - e.g. App.Messages["newMessage"] = newFunction
-	App.Messages = map[string]func(map[string]interface{}, *Session){
+	gotea.App.Messages = map[string]func(map[string]interface{}, *gotea.Session){
 		"add-coordinate": addCoordinate,
 	}
+
+	// create a seed for initial session state
+	gotea.App.InitialSessionState = Model{
+		Coordinates: &CoordinateDB,
+	}
+
 }
 
 // APP SPECFIC
@@ -39,12 +49,19 @@ type Coordinate struct {
 var CoordinateDB []Coordinate
 
 // addCoordinate adds a random coordinate to the database
-func addCoordinate(params map[string]interface{}, s *Session) {
+func addCoordinate(params map[string]interface{}, s *gotea.Session) {
 	// create new coordinate, add to 'database'
 	x := rand.Intn(100)
 	y := rand.Intn(100)
 	CoordinateDB = append(CoordinateDB, Coordinate{x, y})
 
 	// broadcast to all active connections
-	App.broadcast()
+	gotea.App.Broadcast()
+}
+
+// MAIN
+
+// main starts the server
+func main() {
+	gotea.App.Start("../../dist")
 }

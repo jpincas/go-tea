@@ -3,13 +3,13 @@
 
 <h1>Global List with Broadcast Example</h1>
 
+<button class="gotea-click" data-message='add-coordinate'>
+    Add a Random Coordinate
+</button>
+
 <h2>Here's a list of coordinates:</h2>
 <ul>
     {{ range .Coordinates }}
     <li>X: {{ .X }}, Y: {{ .Y }}</li>
     {{ end }}
 </ul>
-
-<button class="gotea-click" data-message='add-coordinate'>
-    Add a Random Coordinate
-</button>
