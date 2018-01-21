@@ -15,14 +15,6 @@ type Model struct {
 	Coordinates *[]Coordinate
 }
 
-// InitialState should return an intial model
-// - REQUIRED by gotea runtime
-func (m Model) initialState() Model {
-	return Model{
-		Coordinates: &CoordinateDB,
-	}
-}
-
 func init() {
 	// Initialise the message map
 	// - REQUIRED by gotea runtime

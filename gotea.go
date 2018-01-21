@@ -16,6 +16,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
@@ -93,9 +94,10 @@ type State interface{}
 // Session is a combination of a websocket connection and some client state
 // - the state is a Model, and is defined specifically by your app
 type Session struct {
-	ID    uuid.UUID
-	Conn  *websocket.Conn
-	State State
+	ID          uuid.UUID
+	Conn        *websocket.Conn
+	State       State
+	LastUpdated time.Time
 }
 
 // SessionStore stores sessions by ID (currently UUID)
@@ -126,6 +128,7 @@ func newSession(conn *websocket.Conn) (*Session, error) {
 
 // save saves a session in the map
 func (session *Session) save() {
+	session.LastUpdated = time.Now()
 	App.Sessions[session.ID] = session
 }
 
@@ -242,8 +245,9 @@ func (msg Msg) Process(session *Session) error {
 	// execute the function attached to the message
 	funcToExecute(msg.Data, session)
 
-	// rerender the session
+	// rerender and save the session
 	session.render()
+	session.save()
 
 	return nil
 }

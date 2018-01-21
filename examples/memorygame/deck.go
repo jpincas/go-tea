@@ -2,6 +2,8 @@ package main
 
 import (
 	"math/rand"
+
+	gotea "github.com/jpincas/go-tea"
 )
 
 // Types
@@ -10,12 +12,12 @@ type Deck []Card
 
 // Messages
 
-func flipAllBack(params map[string]interface{}, s *Session) {
-	s.State.Deck.flipAllBack()
+func flipAllBack(params map[string]interface{}, s *gotea.Session) {
+	s.State.(Model).Deck.flipAllBack()
 }
 
-func removeMatches(params map[string]interface{}, s *Session) {
-	s.State.Deck.removeMatches()
+func removeMatches(params map[string]interface{}, s *gotea.Session) {
+	s.State.(Model).Deck.removeMatches()
 }
 
 // Actions
