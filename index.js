@@ -60,3 +60,31 @@ document.addEventListener(
   },
   false
 );
+
+/*
+ * This is obviously similar to the above, however I think we have a real
+ * problem here, presumably we might have some elements to which we wish to
+ * attach multiple messages for different kinds of events. Eg. we might respond
+ * different to a focus event as to an input event, or a click event as to a
+ * hover event. Fortunately I think we can parameterise this somewhat by just
+ * including the name of the event in the name of the attribute.
+ */
+
+function onInputSendMessage(event) {
+  const message = event.target.dataset.message;
+  let tag = { "input": event.target.value };
+  console.log ("The value is: ", event.target.value);
+  const payload = { message, tag };
+  console.log("Sending websocket message in onInputSendMessage: ", payload);
+  socket.send(JSON.stringify(payload));
+}
+
+document.addEventListener(
+  "input",
+  function(e){
+    if(/gotea-input/.test(e.target.className)){
+      onInputSendMessage(e);
+    }
+  },
+  false
+);

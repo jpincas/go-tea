@@ -1,0 +1,15 @@
+<style>
+</style>
+
+<h1>Please input your password twice.</h1>
+
+<input type="text" class="gotea-input" data-message="input-password-one" />
+<input type="text" class="gotea-input" data-message="input-password-two" />
+
+{{ if (ne .PasswordOne .PasswordTwo) }}
+    Passwords do not match.
+{{ end }} 
+
+Password one is: {{.PasswordOne}}
+Password two is: {{.PasswordTwo}}
+
