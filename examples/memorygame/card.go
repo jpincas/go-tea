@@ -22,9 +22,25 @@ func flipCard(params map[string]interface{}, s *gotea.Session) {
 
 	// if this is the second card of the pair being flipped
 	if s.State.(Model).Deck.numberFlippedCards() == 2 {
-		s.State.(Model).takeTurn()
+
+		// !!!!!!!!!!!!!!!!!!!!!!!!!
+		// We need to find a much neater solution for this
+		castModel := s.State.(Model)
+		pointerToCastModel := &castModel
+		// the function can now modify state
+		pointerToCastModel.takeTurn()
+		// and assign it back (after dereferencing)
+		s.State = *pointerToCastModel
+
 		if s.State.(Model).Deck.hasFoundMatch() {
-			s.State.(Model).incrementScore()
+
+			// !!!!!!!!!!!!!!!!!!!!!!!!!
+			// We need to find a much neater solution for this
+			castModel := s.State.(Model)
+			pointerToCastModel := &castModel
+			pointerToCastModel.incrementScore()
+			s.State = *pointerToCastModel
+
 			go func() {
 				time.Sleep(1500 * time.Millisecond)
 				gotea.Msg{"removeMatches", params}.Process(s)

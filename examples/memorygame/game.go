@@ -1,10 +1,10 @@
 package main
 
-func (model Model) takeTurn() {
+func (model *Model) takeTurn() {
 	model.TurnsTaken++
 }
 
-func (model Model) incrementScore() {
+func (model *Model) incrementScore() {
 	model.Score++
 }
 

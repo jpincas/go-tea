@@ -8,7 +8,6 @@ import (
 // - REQUIRED by gotea runtime
 type Model struct {
 	Deck              Deck
-	DeckFlippedStatus []bool
 	LastAttemptedCard int
 	TurnsTaken        int
 	Score             int
@@ -27,9 +26,9 @@ func init() {
 
 	// create a seed for initial session state
 	gotea.App.InitialSessionState = Model{
-		Deck:              newDeck(10),
+		Deck:              newDeck(4),
 		TurnsTaken:        0,
-		LastAttemptedCard: 11, //hack
+		LastAttemptedCard: 5, //hack
 		Score:             0,
 	}
 
