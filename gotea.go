@@ -7,7 +7,7 @@
 // - at the moment I can't quite work out a sane way to do that
 // - so for now, this file needs to be included with each gotea app
 // - you DO NOT touch this code when building your app
-package main
+package gotea
 
 import (
 	"bytes"
@@ -16,32 +16,49 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
 )
+
+// CONFIGURATION
+
+type Config struct {
+	AppPort int
+}
 
 // APPLICATION
 
 // Application is the top-level representation of your application
 type Application struct {
 	// template for rendering framework errors
-	ErrorTemplate *template.Template
-	Templates     *template.Template
-	Messages      map[string]func(map[string]interface{}, *Session)
-	Sessions      SessionStore
+	ErrorTemplate       *template.Template
+	Templates           *template.Template
+	Messages            map[string]func(map[string]interface{}, *Session)
+	Sessions            SessionStore
+	InitialSessionState State
+	Config              Config
 }
 
 // App instantiates a new application and makes it globally available
 var App Application
 
 // broadcast re-renders every active session
-func (app Application) broadcast() {
+func (app Application) Broadcast() {
 	for _, session := range app.Sessions {
 		if session.Conn != nil {
 			session.render()
 		}
 	}
+}
+
+func (app Application) Start(distDirectory string) {
+	fs := http.FileServer(http.Dir(distDirectory))
+	http.HandleFunc("/server", handler)
+	http.Handle("/", fs)
+	log.Println("Staring gotea app server...")
+	http.ListenAndServe(fmt.Sprintf(":%v", app.Config.AppPort), nil)
 }
 
 // init:
@@ -61,16 +78,26 @@ func init() {
 		<hr />
 		<p>{{ .ErrorMessage }}</p>
 		`))
+
+	//set basic config
+	App.Config = Config{
+		AppPort: 8080,
+	}
 }
+
+// STATE
+
+type State interface{}
 
 // SESSION
 
 // Session is a combination of a websocket connection and some client state
 // - the state is a Model, and is defined specifically by your app
 type Session struct {
-	ID    uuid.UUID
-	Conn  *websocket.Conn
-	State Model
+	ID          uuid.UUID
+	Conn        *websocket.Conn
+	State       State
+	LastUpdated time.Time
 }
 
 // SessionStore stores sessions by ID (currently UUID)
@@ -91,7 +118,7 @@ func newSession(conn *websocket.Conn) (*Session, error) {
 	session := Session{
 		ID:    u2,
 		Conn:  conn,
-		State: initialState(),
+		State: App.InitialSessionState,
 	}
 	session.save()
 
@@ -101,6 +128,7 @@ func newSession(conn *websocket.Conn) (*Session, error) {
 
 // save saves a session in the map
 func (session *Session) save() {
+	session.LastUpdated = time.Now()
 	App.Sessions[session.ID] = session
 }
 
@@ -217,22 +245,9 @@ func (msg Msg) Process(session *Session) error {
 	// execute the function attached to the message
 	funcToExecute(msg.Data, session)
 
-	// rerender the session
+	// rerender and save the session
 	session.render()
+	session.save()
 
 	return nil
-}
-
-// MAIN
-
-// main starts the server
-func main() {
-
-	fs := http.FileServer(http.Dir("../../dist"))
-
-	http.HandleFunc("/server", handler)
-	http.Handle("/", fs)
-
-	log.Println("Staring server...")
-	http.ListenAndServe(":8080", nil)
 }

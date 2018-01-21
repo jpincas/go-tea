@@ -608,7 +608,7 @@ function init(modules, domApi) {
   };
 }
 //# sourceMappingURL=snabbdom.js.map
-},{"./vnode":13,"./is":14,"./htmldomapi":15,"./h":16,"./thunk":17}],8:[function(require,module,exports) {
+},{"./vnode":13,"./is":14,"./htmldomapi":15,"./h":16,"./thunk":17}],6:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function updateClass(oldVnode, vnode) {
@@ -634,7 +634,7 @@ function updateClass(oldVnode, vnode) {
 exports.classModule = { create: updateClass, update: updateClass };
 exports.default = exports.classModule;
 //# sourceMappingURL=class.js.map
-},{}],6:[function(require,module,exports) {
+},{}],4:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function updateProps(oldVnode, vnode) {
@@ -661,7 +661,7 @@ function updateProps(oldVnode, vnode) {
 exports.propsModule = { create: updateProps, update: updateProps };
 exports.default = exports.propsModule;
 //# sourceMappingURL=props.js.map
-},{}],3:[function(require,module,exports) {
+},{}],7:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var raf = (typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout;
@@ -748,7 +748,7 @@ exports.styleModule = {
 };
 exports.default = exports.styleModule;
 //# sourceMappingURL=style.js.map
-},{}],7:[function(require,module,exports) {
+},{}],8:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var xlinkNS = 'http://www.w3.org/1999/xlink';
@@ -804,7 +804,7 @@ function updateAttrs(oldVnode, vnode) {
 exports.attributesModule = { create: updateAttrs, update: updateAttrs };
 exports.default = exports.attributesModule;
 //# sourceMappingURL=attributes.js.map
-},{}],9:[function(require,module,exports) {
+},{}],10:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function vnode(sel, data, children, text, elm) {
@@ -815,7 +815,7 @@ function vnode(sel, data, children, text, elm) {
 exports.vnode = vnode;
 exports.default = vnode;
 //# sourceMappingURL=vnode.js.map
-},{}],10:[function(require,module,exports) {
+},{}],11:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.array = Array.isArray;
@@ -824,7 +824,7 @@ function primitive(s) {
 }
 exports.primitive = primitive;
 //# sourceMappingURL=is.js.map
-},{}],4:[function(require,module,exports) {
+},{}],5:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var vnode_1 = require("./vnode");
@@ -884,7 +884,7 @@ exports.h = h;
 ;
 exports.default = h;
 //# sourceMappingURL=h.js.map
-},{"./vnode":9,"./is":10}],11:[function(require,module,exports) {
+},{"./vnode":10,"./is":11}],9:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function createElement(tagName) {
@@ -951,7 +951,7 @@ exports.htmlDomApi = {
 };
 exports.default = exports.htmlDomApi;
 //# sourceMappingURL=htmldomapi.js.map
-},{}],5:[function(require,module,exports) {
+},{}],3:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var vnode_1 = require("./vnode");
@@ -996,7 +996,7 @@ function toVNode(node, domApi) {
 exports.toVNode = toVNode;
 exports.default = toVNode;
 //# sourceMappingURL=tovnode.js.map
-},{"./vnode":9,"./htmldomapi":11}],2:[function(require,module,exports) {
+},{"./vnode":10,"./htmldomapi":9}],2:[function(require,module,exports) {
 var snabbdom = require("snabbdom");
 var patch = snabbdom.init([
   // Init patch function with chosen modules
@@ -1060,4 +1060,4 @@ document.addEventListener(
   false
 );
 
-},{"snabbdom":12,"snabbdom/modules/class":8,"snabbdom/modules/props":6,"snabbdom/modules/style":3,"snabbdom/modules/attributes":7,"snabbdom/h":4,"snabbdom/tovnode":5}]},{},[2])
+},{"snabbdom":12,"snabbdom/modules/class":6,"snabbdom/modules/props":4,"snabbdom/modules/style":7,"snabbdom/modules/attributes":8,"snabbdom/h":5,"snabbdom/tovnode":3}]},{},[2])
