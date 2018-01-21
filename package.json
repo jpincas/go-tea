@@ -19,6 +19,7 @@
   "homepage": "https://github.com/jpincas/go-tea#readme",
   "dependencies": {
     "html-to-vdom": "^0.7.0",
+    "parcel-bundler": "^1.4.1",
     "picodom": "^1.0.2",
     "skatejs-dom-diff": "^1.0.0",
     "snabbdom": "^0.7.1",
