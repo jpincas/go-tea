@@ -39,11 +39,11 @@ socket.onmessage = function(event) {
 };
 
 function sendMessage(element) {
-  const message = element.srcElement.dataset.message;
-  var tag = element.srcElement.dataset.tag;
-  const data = {};
+  const message = element.target.dataset.message;
+  var tag = element.target.dataset.tag;
+  let data = {};
   if (tag) {
-    data = JSON.parse(element.srcElement.dataset.tag);
+    data = JSON.parse(element.target.dataset.tag);
   }
 
   const payload = { message, data };
