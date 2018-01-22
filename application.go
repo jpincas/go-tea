@@ -47,9 +47,9 @@ func (app Application) Start(distDirectory string) {
 	fs := http.FileServer(http.Dir(distDirectory))
 	http.HandleFunc("/server", handler)
 	http.Handle("/", fs)
-	log.Println("Staring gotea app server...")
+	log.Println("Starting gotea app server...")
+	log.Println("Listening on port: ", app.Config.AppPort)
 	http.ListenAndServe(fmt.Sprintf(":%v", app.Config.AppPort), nil)
-
 	// TODO:
 	// USe this code for routing
 	// http.HandleFunc("/server", handler)
