@@ -22,12 +22,20 @@ type Application struct {
 	IndexTemplate *template.Template
 	// template for rendering framework errors
 	ErrorTemplate *template.Template
-	Templates     *template.Template
-	Messages      map[string]func(MessageArguments, *Session)
+	// holder for app-specific templates
+	Templates *template.Template
+	// map of function names -> function
+	// used by incoming messages to call functions by name
+	Messages map[string]func(MessageArguments, *Session)
+	// map of message generators to be used in templates
 	TemplateFuncs template.FuncMap
-	Sessions      SessionStore
-	NewSession    func() Session
-	Config        Config
+	// list of active sessions
+	Sessions SessionStore
+	// state seeder for new sessions
+	// - injected by the app
+	NewSession func() Session
+	// top level configuration
+	Config Config
 }
 
 // App instantiates a new application and makes it globally available
@@ -42,18 +50,19 @@ func (app Application) Broadcast() {
 	}
 }
 
+// parseTemplates will parse app specific templates
+// this is called AFTER all the init functions
+// because the app.TemplateFuncs must be set up first
 func (app *Application) parseTemplates() {
-	// parse app specific templates
-	// therefore, your app templates should go in the folder 'templates'
+	// your app templates should go in the folder 'templates'
 	// in the root directory of your app
 	app.Templates = template.Must(template.New("main").Funcs(app.TemplateFuncs).ParseGlob("templates/*.html"))
 }
 
 // Start runs the application server
 func (app Application) Start(distDirectory string) {
-
-	// must leave this until here
-	// relies on stuff that happens in init
+	// parse templates here
+	// because template function map must be set up already
 	App.parseTemplates()
 
 	fs := http.FileServer(http.Dir(distDirectory))
@@ -61,10 +70,9 @@ func (app Application) Start(distDirectory string) {
 	http.Handle("/", fs)
 	log.Println("Staring gotea app server...")
 	http.ListenAndServe(fmt.Sprintf(":%v", app.Config.AppPort), nil)
-
 }
 
-// FUTURE ROUTING CODE
+// FUTURE ROUTING CODE - LEAVE FOR NOW
 
 // TODO:
 // USe this code for routing

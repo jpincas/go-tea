@@ -13,17 +13,11 @@ type Deck []Card
 // Message generators
 
 func FlipAllBack(_ gotea.MessageArguments) gotea.Message {
-	return gotea.Message{
-		Func:     flipAllBack,
-		FuncCode: "FlipAllBack",
-	}
+	return gotea.NewMsg(flipAllBack, nil)
 }
 
 func RemoveMatches(_ gotea.MessageArguments) gotea.Message {
-	return gotea.Message{
-		Func:     removeMatches,
-		FuncCode: "RemoveMatches",
-	}
+	return gotea.NewMsg(removeMatches, nil)
 }
 
 // Messages

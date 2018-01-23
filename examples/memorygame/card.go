@@ -17,11 +17,7 @@ type Card struct {
 // Message generator
 
 func FlipCard(args gotea.MessageArguments) gotea.Message {
-	return gotea.Message{
-		Func:      flipCard,
-		FuncCode:  "FlipCard",
-		Arguments: args,
-	}
+	return gotea.NewMsg(flipCard, args)
 }
 
 // Messages
