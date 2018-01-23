@@ -21,9 +21,25 @@
 
 <h1>Evil(ish) Password Validator.</h1>
 
+<p>
 This is really just an example of dealing with input boxes.
 Please do not implement such password rules.
-
+</p>
+<p>
+    A couple of notes:
+    <ol>
+        <li>It doesn't do any blurring. So all of the errors are shown up front.
+            It's actually quite possible to implement the exact style of blurring
+            you wish for by yourself. Simply have a <code>Blurred</code> field on your
+            model associated with the input and then set that when input is received
+            on that field. 
+        </li>
+        <li>Obviously the type of the input should be set to <code>password</code>
+            so that it is not displayed, but I want you to see what you are typing
+            as this is for demonstration purposes only.
+        </li>
+    </ol>
+</p>
 
 <div class="password-container">
     <input type="text" class="gotea-input" data-message="input-password-one" />
