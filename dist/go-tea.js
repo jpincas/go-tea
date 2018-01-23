@@ -608,7 +608,7 @@ function init(modules, domApi) {
   };
 }
 //# sourceMappingURL=snabbdom.js.map
-},{"./vnode":13,"./is":14,"./htmldomapi":15,"./h":16,"./thunk":17}],5:[function(require,module,exports) {
+},{"./vnode":13,"./is":14,"./htmldomapi":15,"./h":16,"./thunk":17}],8:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function updateClass(oldVnode, vnode) {
@@ -634,7 +634,7 @@ function updateClass(oldVnode, vnode) {
 exports.classModule = { create: updateClass, update: updateClass };
 exports.default = exports.classModule;
 //# sourceMappingURL=class.js.map
-},{}],7:[function(require,module,exports) {
+},{}],6:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function updateProps(oldVnode, vnode) {
@@ -661,7 +661,7 @@ function updateProps(oldVnode, vnode) {
 exports.propsModule = { create: updateProps, update: updateProps };
 exports.default = exports.propsModule;
 //# sourceMappingURL=props.js.map
-},{}],8:[function(require,module,exports) {
+},{}],4:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var raf = (typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout;
@@ -748,7 +748,7 @@ exports.styleModule = {
 };
 exports.default = exports.styleModule;
 //# sourceMappingURL=style.js.map
-},{}],6:[function(require,module,exports) {
+},{}],5:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var xlinkNS = 'http://www.w3.org/1999/xlink';
@@ -951,7 +951,7 @@ exports.htmlDomApi = {
 };
 exports.default = exports.htmlDomApi;
 //# sourceMappingURL=htmldomapi.js.map
-},{}],4:[function(require,module,exports) {
+},{}],7:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var vnode_1 = require("./vnode");
@@ -1057,4 +1057,32 @@ document.addEventListener(
   false
 );
 
-},{"snabbdom":12,"snabbdom/modules/class":5,"snabbdom/modules/props":7,"snabbdom/modules/style":8,"snabbdom/modules/attributes":6,"snabbdom/h":3,"snabbdom/tovnode":4}]},{},[2])
+/*
+ * This is obviously similar to the above, however I think we have a real
+ * problem here, presumably we might have some elements to which we wish to
+ * attach multiple messages for different kinds of events. Eg. we might respond
+ * different to a focus event as to an input event, or a click event as to a
+ * hover event. Fortunately I think we can parameterise this somewhat by just
+ * including the name of the event in the name of the attribute.
+ */
+
+function onInputSendMessage(event) {
+  const message = event.target.dataset.message;
+  let tag = { "input": event.target.value };
+  console.log ("The value is: ", event.target.value);
+  const payload = { message, tag };
+  console.log("Sending websocket message in onInputSendMessage: ", payload);
+  socket.send(JSON.stringify(payload));
+}
+
+document.addEventListener(
+  "input",
+  function(e){
+    if(/gotea-input/.test(e.target.className)){
+      onInputSendMessage(e);
+    }
+  },
+  false
+);
+
+},{"snabbdom":12,"snabbdom/modules/class":8,"snabbdom/modules/props":6,"snabbdom/modules/style":4,"snabbdom/modules/attributes":5,"snabbdom/h":3,"snabbdom/tovnode":7}]},{},[2])

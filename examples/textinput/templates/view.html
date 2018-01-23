@@ -42,25 +42,25 @@ Please do not implement such password rules.
 </p>
 
 <div class="password-container">
-    <input type="text" class="gotea-input" data-message="input-password-one" />
+    <input type="text" class="gotea-input" data-msg='{{ InputPasswordOne 1 | Msg }}' />
     <div>
         <ul>
             {{ range $constraint := .PasswordErrors }}
-                <li class="{{if $constraint.Satisfied}}satisfied{{else}}unsatisfied{{end}}">
-                    {{if $constraint.Satisfied }}
-                    &#x2714;
-                    {{else}}
-                    &#x2718; 
-                    {{end}}    
-                    {{$constraint.Description}}
-                </li>
+            <li class="{{if $constraint.Satisfied}}satisfied{{else}}unsatisfied{{end}}">
+                {{if $constraint.Satisfied }}
+                &#x2714;
+                {{else}}
+                &#x2718; 
+                {{end}}    
+                {{$constraint.Description}}
+            </li>
             {{ end }}
         </ul>
     </div>
 </div>
 
 <div class="password-container">
-    <input type="text" class="gotea-input" data-message="input-password-two" />
+    <input type="text" class="gotea-input" data-msg='{{ InputPasswordTwo 1 | Msg }}' />
     <div>
         {{ if (ne .PasswordOne .PasswordTwo) }}
             <span class="unsatisfied">

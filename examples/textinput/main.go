@@ -14,32 +14,47 @@ type Model struct {
 
 func init() {
 
-	// set messages
-	gotea.App.Messages["input-password-one"] = inputPasswordOne
-	gotea.App.Messages["input-password-two"] = inputPasswordTwo
+	gotea.RegisterMessages(
+		InputPasswordOne,
+		InputPasswordTwo,
+	)
 
-	// create a seed for initial session state
-	gotea.App.InitialSessionState = Model{
-		PasswordOne: "",
-		PasswordTwo: "",
+	// function that returns a new session
+	gotea.App.NewSession = func() gotea.Session {
+		return gotea.Session{
+			State: Model{
+				PasswordOne: "",
+				PasswordTwo: "",
+			},
+		}
 	}
-
 	gotea.App.Config.AppPort = 8081
+	InputPasswordOne("hello")
 }
-func inputPasswordOne(params gotea.MsgTag, s *gotea.Session) {
-	// s.State.(Model).PasswordOne = params["input"].(string)
+
+func InputPasswordOne(_ gotea.MessageArguments) gotea.Message {
+	return gotea.NewMsg(inputPasswordOne, nil)
+}
+
+func InputPasswordTwo(_ gotea.MessageArguments) gotea.Message {
+	return gotea.NewMsg(inputPasswordTwo, nil)
+}
+
+func inputPasswordOne(args gotea.MessageArguments, s *gotea.Session) {
 	// !!!!!!!!!!!!!!!!!!!!!!!!!
 	// We need to find a much neater solution for this
 	castModel := s.State.(Model)
 	pointerToCastModel := &castModel
-	pointerToCastModel.PasswordOne = params["input"].(string)
+	pointerToCastModel.PasswordOne = args.(string)
 	s.State = *pointerToCastModel
 }
 
-func inputPasswordTwo(params gotea.MsgTag, s *gotea.Session) {
+func inputPasswordTwo(args gotea.MessageArguments, s *gotea.Session) {
+	// !!!!!!!!!!!!!!!!!!!!!!!!!
+	// We need to find a much neater solution for this
 	castModel := s.State.(Model)
 	pointerToCastModel := &castModel
-	pointerToCastModel.PasswordTwo = params["input"].(string)
+	pointerToCastModel.PasswordTwo = args.(string)
 	s.State = *pointerToCastModel
 }
 
