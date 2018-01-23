@@ -1,4 +1,22 @@
 <style>
+    .password-container{
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+    }
+
+    .password-container ul{
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .satisfied{
+        color: #2e7d32;
+    }
+    .unsatisfied{
+        color: #b71c1c;
+    }
 </style>
 
 <h1>Evil(ish) Password Validator.</h1>
@@ -7,22 +25,31 @@ This is really just an example of dealing with input boxes.
 Please do not implement such password rules.
 
 
-<div>
+<div class="password-container">
     <input type="text" class="gotea-input" data-message="input-password-one" />
     <div>
         <ul>
-            {{ range $error := .PasswordErrors }}
-                <li>{{$error}}</li>
+            {{ range $constraint := .PasswordErrors }}
+                <li class="{{if $constraint.Satisfied}}satisfied{{else}}unsatisfied{{end}}">
+                    {{if $constraint.Satisfied }}
+                    &#x2714;
+                    {{else}}
+                    &#x2718; 
+                    {{end}}    
+                    {{$constraint.Description}}
+                </li>
             {{ end }}
         </ul>
     </div>
 </div>
 
-<div>
+<div class="password-container">
     <input type="text" class="gotea-input" data-message="input-password-two" />
     <div>
         {{ if (ne .PasswordOne .PasswordTwo) }}
-            Passwords do not match.
+            <span class="unsatisfied">
+                &#x2718; Passwords do not match.
+            </span>
         {{ end }} 
     </div>
 </div>
