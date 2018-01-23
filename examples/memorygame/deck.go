@@ -10,13 +10,23 @@ import (
 
 type Deck []Card
 
+// Message generators
+
+func FlipAllBack(_ gotea.MessageArguments) gotea.Message {
+	return gotea.NewMsg(flipAllBack, nil)
+}
+
+func RemoveMatches(_ gotea.MessageArguments) gotea.Message {
+	return gotea.NewMsg(removeMatches, nil)
+}
+
 // Messages
 
-func flipAllBack(params gotea.MsgTag, s *gotea.Session) {
+func flipAllBack(_ gotea.MessageArguments, s *gotea.Session) {
 	s.State.(Model).Deck.flipAllBack()
 }
 
-func removeMatches(params gotea.MsgTag, s *gotea.Session) {
+func removeMatches(_ gotea.MessageArguments, s *gotea.Session) {
 	s.State.(Model).Deck.removeMatches()
 }
 

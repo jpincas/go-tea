@@ -15,10 +15,11 @@ type Model struct {
 
 func init() {
 
-	// set messages
-	gotea.App.Messages["flipcard"] = flipCard
-	gotea.App.Messages["flipAllBack"] = flipAllBack
-	gotea.App.Messages["removeMatches"] = removeMatches
+	gotea.RegisterMessages(
+		FlipCard,
+		FlipAllBack,
+		RemoveMatches,
+	)
 
 	// function that returns a new session
 	gotea.App.NewSession = func() gotea.Session {
