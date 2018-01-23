@@ -49,9 +49,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 	defer session.remove()
 
-	session.render()
-
 	for {
+
 		_, message, err := conn.ReadMessage()
 		if err != nil {
 			renderError(conn, err)

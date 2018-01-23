@@ -21,12 +21,12 @@ type Application struct {
 	// template for rendering index html and js
 	IndexTemplate *template.Template
 	// template for rendering framework errors
-	ErrorTemplate       *template.Template
-	Templates           *template.Template
-	Messages            map[string]func(MsgTag, *Session)
-	Sessions            SessionStore
-	InitialSessionState State
-	Config              Config
+	ErrorTemplate *template.Template
+	Templates     *template.Template
+	Messages      map[string]func(MsgTag, *Session)
+	Sessions      SessionStore
+	NewSession    func() Session
+	Config        Config
 }
 
 // App instantiates a new application and makes it globally available

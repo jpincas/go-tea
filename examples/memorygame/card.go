@@ -17,6 +17,7 @@ type Card struct {
 // Messages
 
 func flipCard(params gotea.MsgTag, s *gotea.Session) {
+
 	cardToFlip := int(params["cardIndex"].(float64))
 	s.State.(Model).Deck.flipCard(cardToFlip)
 
