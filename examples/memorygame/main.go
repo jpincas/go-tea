@@ -15,17 +15,22 @@ type Model struct {
 
 func init() {
 
-	// set messages
-	gotea.App.Messages["flipcard"] = flipCard
-	gotea.App.Messages["flipAllBack"] = flipAllBack
-	gotea.App.Messages["removeMatches"] = removeMatches
+	gotea.RegisterMessages(
+		FlipCard,
+		FlipAllBack,
+		RemoveMatches,
+	)
 
-	// create a seed for initial session state
-	gotea.App.InitialSessionState = Model{
-		Deck:              newDeck(4),
-		TurnsTaken:        0,
-		LastAttemptedCard: 5, //hack
-		Score:             0,
+	// function that returns a new session
+	gotea.App.NewSession = func() gotea.Session {
+		return gotea.Session{
+			State: Model{
+				Deck:              newDeck(4),
+				TurnsTaken:        0,
+				LastAttemptedCard: 5, //hack
+				Score:             0,
+			},
+		}
 	}
 
 }

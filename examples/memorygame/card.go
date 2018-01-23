@@ -14,10 +14,18 @@ type Card struct {
 	Matched bool
 }
 
+// Message generator
+
+func FlipCard(args gotea.MessageArguments) gotea.Message {
+	return gotea.NewMsg(flipCard, args)
+}
+
 // Messages
 
-func flipCard(params gotea.MsgTag, s *gotea.Session) {
-	cardToFlip := int(params["cardIndex"].(float64))
+func flipCard(args gotea.MessageArguments, s *gotea.Session) {
+
+	cardToFlip := int(args.(float64))
+
 	s.State.(Model).Deck.flipCard(cardToFlip)
 
 	// if this is the second card of the pair being flipped
@@ -43,12 +51,12 @@ func flipCard(params gotea.MsgTag, s *gotea.Session) {
 
 			go func() {
 				time.Sleep(1500 * time.Millisecond)
-				gotea.Msg{"removeMatches", params}.Process(s)
+				RemoveMatches(nil).Process(s)
 			}()
 		} else {
 			go func() {
 				time.Sleep(1500 * time.Millisecond)
-				gotea.Msg{"flipAllBack", params}.Process(s)
+				FlipAllBack(nil).Process(s)
 			}()
 		}
 	}

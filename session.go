@@ -32,15 +32,16 @@ type SessionStore []*Session
 // - sets the intial stats by calling the app specific initialState()
 // - saves the sessions
 func newSession(conn *websocket.Conn) (*Session, error) {
-	// create the session and save it
-	session := Session{
-		Conn:  conn,
-		State: App.InitialSessionState,
-	}
+	// create the session from seed state, add the connection
+	// and add the session to the active sessions list
+	session := App.NewSession()
+	session.Conn = conn
 	session.add()
 
-	return &session, nil
+	// render the initial state straight away
+	session.render()
 
+	return &session, nil
 }
 
 // add updates the list of active sessions
