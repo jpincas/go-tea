@@ -3,11 +3,17 @@ package gotea
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 )
 
 func init() {
 	// initialise the message map
-	// App.Messages = map[string]func(MessageArguments, *Session){}
+	App.Messages = map[string]func(MessageArguments, *Session){}
+
+	// provide global template funcs
+	App.TemplateFuncs = template.FuncMap{
+		"Msg": formatMessageAsHtmlAttrs,
+	}
 }
 
 type MessageArguments interface{}

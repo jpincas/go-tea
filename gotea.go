@@ -1,28 +1,13 @@
 package gotea
 
 import (
-	"html/template"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/websocket"
 )
 
-func ParseTemplates() {
-	// parse app specific templates
-	// therefore, your app templates should go in the folder 'templates'
-	// in the root directory of your app
-	App.Templates = template.Must(template.New("main").Funcs(App.TemplateFuncs).ParseGlob("templates/*.html"))
-}
-
 func init() {
-
-	// initialise the message map
-	App.Messages = map[string]func(MessageArguments, *Session){}
-
-	App.TemplateFuncs = template.FuncMap{
-		"Msg": formatMessageAsHtmlAttrs,
-	}
 
 	//set basic config
 	App.Config = Config{
