@@ -3,7 +3,7 @@
 
     <div class="card-container">
         {{ template "card.html" $card }} {{ if not $card.Matched }}
-        <button class="flipcard gotea-click" data-message='flipcard' data-tag='{ "cardIndex": {{ $index }} }'>
+        <button class="flipcard gotea-click" data-msg='{{ FlipCard $index | Msg }}'>
             Flip
         </button>
         {{ end }}

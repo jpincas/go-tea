@@ -1,7 +1,6 @@
 package gotea
 
 import (
-	"encoding/json"
 	"html/template"
 	"log"
 	"net/http"
@@ -9,11 +8,21 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func init() {
+func ParseTemplates() {
 	// parse app specific templates
 	// therefore, your app templates should go in the folder 'templates'
 	// in the root directory of your app
-	App.Templates = template.Must(template.New("main").ParseGlob("templates/*.html"))
+	App.Templates = template.Must(template.New("main").Funcs(App.TemplateFuncs).ParseGlob("templates/*.html"))
+}
+
+func init() {
+
+	// initialise the message map
+	App.Messages = map[string]func(MessageArguments, *Session){}
+
+	App.TemplateFuncs = template.FuncMap{
+		"Msg": formatMessageAsHtmlAttrs,
+	}
 
 	//set basic config
 	App.Config = Config{
@@ -52,19 +61,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	session.render()
 
 	for {
-		_, message, err := conn.ReadMessage()
+
+		var message Message
+
+		err := conn.ReadJSON(&message)
 		if err != nil {
 			renderError(conn, err)
 			break
 		}
 
-		var msg Msg
-		err = json.Unmarshal(message, &msg)
-		if err != nil {
-			renderError(conn, err)
-		}
-
-		if err := msg.Process(session); err != nil {
+		if err := message.Process(session); err != nil {
 			renderError(conn, err)
 		}
 

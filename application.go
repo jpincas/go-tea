@@ -23,7 +23,8 @@ type Application struct {
 	// template for rendering framework errors
 	ErrorTemplate       *template.Template
 	Templates           *template.Template
-	Messages            map[string]func(MsgTag, *Session)
+	Messages            map[string]func(MessageArguments, *Session)
+	TemplateFuncs       template.FuncMap
 	Sessions            SessionStore
 	InitialSessionState State
 	Config              Config

@@ -16,9 +16,16 @@ type Model struct {
 func init() {
 
 	// set messages
-	gotea.App.Messages["flipcard"] = flipCard
-	gotea.App.Messages["flipAllBack"] = flipAllBack
-	gotea.App.Messages["removeMatches"] = removeMatches
+	// gotea.App.Messages["flipcard"] = flipCard
+	// gotea.App.Messages["flipAllBack"] = flipAllBack
+	// gotea.App.Messages["removeMatches"] = removeMatches
+
+	//gotea.App.Messages[FlipCard(nil).FuncCode] = FlipCard(nil).Func
+	//gotea.App.TemplateFuncs[FlipCard(nil).FuncCode] = FlipCard
+
+	gotea.RegisterMessages(
+		FlipCard,
+	)
 
 	// create a seed for initial session state
 	gotea.App.InitialSessionState = Model{
@@ -27,6 +34,8 @@ func init() {
 		LastAttemptedCard: 5, //hack
 		Score:             0,
 	}
+
+	gotea.ParseTemplates()
 
 }
 
