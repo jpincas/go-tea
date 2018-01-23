@@ -17,6 +17,8 @@ func init() {
 
 	gotea.RegisterMessages(
 		FlipCard,
+		FlipAllBack,
+		RemoveMatches,
 	)
 
 	// function that returns a new session

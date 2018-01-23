@@ -55,18 +55,12 @@ func flipCard(args gotea.MessageArguments, s *gotea.Session) {
 
 			go func() {
 				time.Sleep(1500 * time.Millisecond)
-				gotea.Message{
-					Func:      removeMatches,
-					Arguments: nil,
-				}.Process(s)
+				RemoveMatches(nil).Process(s)
 			}()
 		} else {
 			go func() {
 				time.Sleep(1500 * time.Millisecond)
-				gotea.Message{
-					Func:      flipAllBack,
-					Arguments: nil,
-				}.Process(s)
+				FlipAllBack(nil).Process(s)
 			}()
 		}
 	}

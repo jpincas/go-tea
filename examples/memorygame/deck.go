@@ -10,6 +10,22 @@ import (
 
 type Deck []Card
 
+// Message generators
+
+func FlipAllBack(_ gotea.MessageArguments) gotea.Message {
+	return gotea.Message{
+		Func:     flipAllBack,
+		FuncCode: "FlipAllBack",
+	}
+}
+
+func RemoveMatches(_ gotea.MessageArguments) gotea.Message {
+	return gotea.Message{
+		Func:     removeMatches,
+		FuncCode: "RemoveMatches",
+	}
+}
+
 // Messages
 
 func flipAllBack(_ gotea.MessageArguments, s *gotea.Session) {
