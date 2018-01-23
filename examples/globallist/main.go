@@ -19,9 +19,13 @@ func init() {
 
 	gotea.App.Messages["add-coordinate"] = addCoordinate
 
-	// create a seed for initial session state
-	gotea.App.InitialSessionState = Model{
-		Coordinates: &CoordinateDB,
+	// function that returns a new session
+	gotea.App.NewSession = func() gotea.Session {
+		return gotea.Session{
+			State: Model{
+				Coordinates: &CoordinateDB,
+			},
+		}
 	}
 
 }

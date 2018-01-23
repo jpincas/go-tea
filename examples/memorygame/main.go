@@ -27,12 +27,16 @@ func init() {
 		FlipCard,
 	)
 
-	// create a seed for initial session state
-	gotea.App.InitialSessionState = Model{
-		Deck:              newDeck(4),
-		TurnsTaken:        0,
-		LastAttemptedCard: 5, //hack
-		Score:             0,
+	// function that returns a new session
+	gotea.App.NewSession = func() gotea.Session {
+		return gotea.Session{
+			State: Model{
+				Deck:              newDeck(4),
+				TurnsTaken:        0,
+				LastAttemptedCard: 5, //hack
+				Score:             0,
+			},
+		}
 	}
 
 	gotea.ParseTemplates()

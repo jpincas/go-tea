@@ -58,8 +58,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 	defer session.remove()
 
-	session.render()
-
 	for {
 
 		var message Message

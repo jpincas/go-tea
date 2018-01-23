@@ -32,12 +32,17 @@ type SessionStore []*Session
 // - sets the intial stats by calling the app specific initialState()
 // - saves the sessions
 func newSession(conn *websocket.Conn) (*Session, error) {
+	log.Println("Creating new session")
+
 	// create the session and save it
-	session := Session{
-		Conn:  conn,
-		State: App.InitialSessionState,
-	}
+	session := App.NewSession()
+	session.Conn = conn
+
 	session.add()
+	log.Println("There are ", len(App.Sessions), " active session(s)")
+	log.Println(App.Sessions)
+
+	session.render()
 
 	return &session, nil
 
@@ -53,6 +58,7 @@ func (session *Session) add() {
 func (session *Session) remove() {
 	for i, stored := range App.Sessions {
 		if stored == session {
+			log.Println("removing session")
 			// safe delete NOT preserving order
 			// https://github.com/golang/go/wiki/SliceTricks
 			App.Sessions[i] = App.Sessions[len(App.Sessions)-1]
