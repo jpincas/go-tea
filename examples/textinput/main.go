@@ -29,15 +29,14 @@ func init() {
 		}
 	}
 	gotea.App.Config.AppPort = 8081
-	InputPasswordOne("hello")
 }
 
-func InputPasswordOne(_ gotea.MessageArguments) gotea.Message {
-	return gotea.NewMsg(inputPasswordOne, nil)
+func InputPasswordOne(args gotea.MessageArguments) gotea.Message {
+	return gotea.NewMsg(inputPasswordOne, args)
 }
 
-func InputPasswordTwo(_ gotea.MessageArguments) gotea.Message {
-	return gotea.NewMsg(inputPasswordTwo, nil)
+func InputPasswordTwo(args gotea.MessageArguments) gotea.Message {
+	return gotea.NewMsg(inputPasswordTwo, args)
 }
 
 func inputPasswordOne(args gotea.MessageArguments, s *gotea.Session) {
@@ -45,7 +44,8 @@ func inputPasswordOne(args gotea.MessageArguments, s *gotea.Session) {
 	// We need to find a much neater solution for this
 	castModel := s.State.(Model)
 	pointerToCastModel := &castModel
-	pointerToCastModel.PasswordOne = args.(string)
+	arguments := args.([]interface {})
+	pointerToCastModel.PasswordOne = arguments[0].(string)
 	s.State = *pointerToCastModel
 }
 
@@ -54,7 +54,8 @@ func inputPasswordTwo(args gotea.MessageArguments, s *gotea.Session) {
 	// We need to find a much neater solution for this
 	castModel := s.State.(Model)
 	pointerToCastModel := &castModel
-	pointerToCastModel.PasswordTwo = args.(string)
+	arguments := args.([]interface {})
+	pointerToCastModel.PasswordTwo = arguments[0].(string)
 	s.State = *pointerToCastModel
 }
 
@@ -65,38 +66,38 @@ type PasswordConstraint struct {
 
 func (model Model) PasswordErrors() []PasswordConstraint {
 	errors := make([]PasswordConstraint, 0)
-	errors = append(errors, 
+	errors = append(errors,
 		PasswordConstraint{
 			Satisfied: len(model.PasswordOne) >= 8,
 			Description: "Password must be more than 8 characters long.",
 		})
 
-	errors = append(errors, 
+	errors = append(errors,
 		PasswordConstraint{
 			Satisfied: len(model.PasswordOne) <= 10,
 			Description: "Password must be 10 characters or fewer",
 		})
-		
-	errors = append(errors, 
+
+	errors = append(errors,
 		PasswordConstraint{
 			Satisfied: s.ToLower(model.PasswordOne) != model.PasswordOne,
 			Description: "Password must contain one upper-case letter",
 		})
 
-	errors = append(errors, 
+	errors = append(errors,
 		PasswordConstraint{
 			Satisfied: s.ToUpper(model.PasswordOne) != model.PasswordOne,
 			Description: "Password must contain one lower-case letter",
 		})
 
-	errors = append(errors, 
+	errors = append(errors,
 		PasswordConstraint{
 			Satisfied: s.ContainsAny(model.PasswordOne, "0123456789"),
 			Description: "Password must contain a number",
 		})
 
 	symbols := "!@%^&*;,."
-	errors = append(errors, 
+	errors = append(errors,
 		PasswordConstraint{
 			Satisfied: s.ContainsAny(model.PasswordOne, symbols),
 			Description: "Password must contain one of the following symbols: " + symbols,

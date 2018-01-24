@@ -608,7 +608,7 @@ function init(modules, domApi) {
   };
 }
 //# sourceMappingURL=snabbdom.js.map
-},{"./vnode":13,"./is":14,"./htmldomapi":15,"./h":16,"./thunk":17}],8:[function(require,module,exports) {
+},{"./vnode":13,"./is":14,"./htmldomapi":15,"./h":16,"./thunk":17}],5:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function updateClass(oldVnode, vnode) {
@@ -634,7 +634,7 @@ function updateClass(oldVnode, vnode) {
 exports.classModule = { create: updateClass, update: updateClass };
 exports.default = exports.classModule;
 //# sourceMappingURL=class.js.map
-},{}],6:[function(require,module,exports) {
+},{}],7:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function updateProps(oldVnode, vnode) {
@@ -661,7 +661,7 @@ function updateProps(oldVnode, vnode) {
 exports.propsModule = { create: updateProps, update: updateProps };
 exports.default = exports.propsModule;
 //# sourceMappingURL=props.js.map
-},{}],4:[function(require,module,exports) {
+},{}],8:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var raf = (typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout;
@@ -748,7 +748,7 @@ exports.styleModule = {
 };
 exports.default = exports.styleModule;
 //# sourceMappingURL=style.js.map
-},{}],5:[function(require,module,exports) {
+},{}],6:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var xlinkNS = 'http://www.w3.org/1999/xlink';
@@ -815,7 +815,7 @@ function vnode(sel, data, children, text, elm) {
 exports.vnode = vnode;
 exports.default = vnode;
 //# sourceMappingURL=vnode.js.map
-},{}],10:[function(require,module,exports) {
+},{}],11:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.array = Array.isArray;
@@ -824,7 +824,7 @@ function primitive(s) {
 }
 exports.primitive = primitive;
 //# sourceMappingURL=is.js.map
-},{}],3:[function(require,module,exports) {
+},{}],4:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var vnode_1 = require("./vnode");
@@ -884,7 +884,7 @@ exports.h = h;
 ;
 exports.default = h;
 //# sourceMappingURL=h.js.map
-},{"./vnode":9,"./is":10}],11:[function(require,module,exports) {
+},{"./vnode":9,"./is":11}],10:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function createElement(tagName) {
@@ -951,7 +951,7 @@ exports.htmlDomApi = {
 };
 exports.default = exports.htmlDomApi;
 //# sourceMappingURL=htmldomapi.js.map
-},{}],7:[function(require,module,exports) {
+},{}],3:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var vnode_1 = require("./vnode");
@@ -996,7 +996,7 @@ function toVNode(node, domApi) {
 exports.toVNode = toVNode;
 exports.default = toVNode;
 //# sourceMappingURL=tovnode.js.map
-},{"./vnode":9,"./htmldomapi":11}],2:[function(require,module,exports) {
+},{"./vnode":9,"./htmldomapi":10}],2:[function(require,module,exports) {
 var snabbdom = require("snabbdom");
 var patch = snabbdom.init([
   // Init patch function with chosen modules
@@ -1011,14 +1011,14 @@ var toVNode = require("snabbdom/tovnode").default;
 
 var socket = new WebSocket(
   (window.location.protocol === "https:" ? "wss://" : "ws://") +
-    window.location.host +
-    "/server"
+  window.location.host +
+  "/server"
 );
 
 var container;
 var oldNode;
 
-socket.onmessage = function(event) {
+socket.onmessage = function (event) {
   var el = document.createElement("div");
   el.innerHTML = event.data;
   el.setAttribute("id", "view");
@@ -1049,7 +1049,7 @@ function sendMessage(element) {
 
 document.addEventListener(
   "click",
-  function(e) {
+  function (e) {
     if (/gotea-click/.test(e.target.className)) {
       sendMessage(e);
     }
@@ -1067,22 +1067,27 @@ document.addEventListener(
  */
 
 function onInputSendMessage(event) {
-  const message = event.target.dataset.message;
-  let tag = { "input": event.target.value };
-  console.log ("The value is: ", event.target.value);
-  const payload = { message, tag };
-  console.log("Sending websocket message in onInputSendMessage: ", payload);
-  socket.send(JSON.stringify(payload));
+  let _message = event.target.dataset.msg;
+  let message = {};
+  if (_message) {
+    message = JSON.parse(_message);
+  }
+  message['arguments'] = [event.target.value];
+  // message['arguments'].push(event.target.value);
+  console.log("Sending websocket message in onInputSendMessage: ", message);
+  var json = JSON.stringify(message);
+  console.log(json);
+  socket.send(json);
 }
 
 document.addEventListener(
   "input",
-  function(e){
-    if(/gotea-input/.test(e.target.className)){
+  function (e) {
+    if (/gotea-input/.test(e.target.className)) {
       onInputSendMessage(e);
     }
   },
   false
 );
 
-},{"snabbdom":12,"snabbdom/modules/class":8,"snabbdom/modules/props":6,"snabbdom/modules/style":4,"snabbdom/modules/attributes":5,"snabbdom/h":3,"snabbdom/tovnode":7}]},{},[2])
+},{"snabbdom":12,"snabbdom/modules/class":5,"snabbdom/modules/props":7,"snabbdom/modules/style":8,"snabbdom/modules/attributes":6,"snabbdom/h":4,"snabbdom/tovnode":3}]},{},[2])

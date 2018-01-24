@@ -12,14 +12,14 @@ var toVNode = require("snabbdom/tovnode").default;
 
 var socket = new WebSocket(
   (window.location.protocol === "https:" ? "wss://" : "ws://") +
-    window.location.host +
-    "/server"
+  window.location.host +
+  "/server"
 );
 
 var container;
 var oldNode;
 
-socket.onmessage = function(event) {
+socket.onmessage = function (event) {
   var el = document.createElement("div");
   el.innerHTML = event.data;
   el.setAttribute("id", "view");
@@ -50,7 +50,7 @@ function sendMessage(element) {
 
 document.addEventListener(
   "click",
-  function(e) {
+  function (e) {
     if (/gotea-click/.test(e.target.className)) {
       sendMessage(e);
     }
@@ -68,18 +68,22 @@ document.addEventListener(
  */
 
 function onInputSendMessage(event) {
-  const message = event.target.dataset.message;
-  let tag = { "input": event.target.value };
-  console.log ("The value is: ", event.target.value);
-  const payload = { message, tag };
-  console.log("Sending websocket message in onInputSendMessage: ", payload);
-  socket.send(JSON.stringify(payload));
+  let _message = event.target.dataset.msg;
+  let message = {};
+  if (_message) {
+    message = JSON.parse(_message);
+  }
+  message['arguments'] = [event.target.value];
+  // message['arguments'].push(event.target.value);
+  console.log("Sending websocket message in onInputSendMessage: ", message);
+  var json = JSON.stringify(message);
+  socket.send(json);
 }
 
 document.addEventListener(
   "input",
-  function(e){
-    if(/gotea-input/.test(e.target.className)){
+  function (e) {
+    if (/gotea-input/.test(e.target.className)) {
       onInputSendMessage(e);
     }
   },
