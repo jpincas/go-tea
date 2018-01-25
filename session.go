@@ -71,7 +71,10 @@ func (session *Session) render() {
 		log.Println("Could not render, no socket to render to")
 		return
 	}
-	tpl := bytes.Buffer{}
-	App.Templates.ExecuteTemplate(&tpl, "view.html", session.State)
-	session.Conn.WriteMessage(1, tpl.Bytes())
+
+	// set up a buffer, render the base view template with the session
+	// and send down the socket
+	buf := bytes.Buffer{}
+	App.RenderView(&buf, *session)
+	session.Conn.WriteMessage(1, buf.Bytes())
 }

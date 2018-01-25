@@ -1,3 +1,8 @@
+{% package views %} 
+{% import "github.com/jpincas/go-tea" %}
+{% import "github.com/jpincas/go-tea/examples/memorygame/types" %}  
+{% func Main(s gotea.Session) %}
+
 <style>
     #deck {
         display: flex;
@@ -37,7 +42,9 @@
     }
 </style>
 
-<h1>Card Memory Game</h1>
-<h2>Turns Taken: {{ .TurnsTaken }} Pairs Found: {{ .Score }}</h2>
+{% code m := s.State.(types.Model) %}
 
-{{ if .HasWon }} Well Done! You Won! {{ end }} {{ template "deck.html" .Deck }}
+<h1>Card Memory Game</h1>
+<h2>Turns Taken: {%d m.TurnsTaken %} Pairs Found: {%d m.Score %}</h2>
+
+{% if m.HasWon() %} Well Done! You Won! {% endif %} {%= RenderDeck(m.Deck) %} {% endfunc %}
