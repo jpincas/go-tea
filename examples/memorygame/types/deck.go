@@ -1,38 +1,29 @@
-package main
+package types
 
 import (
 	"math/rand"
+	"time"
 
 	gotea "github.com/jpincas/go-tea"
 )
 
-// Types
-
 type Deck []Card
 
-// Message generators
-
-func FlipAllBack(_ gotea.MessageArguments) gotea.Message {
-	return gotea.NewMsg(flipAllBack, nil)
+func FlipAllBack(_ gotea.MessageArguments, s *gotea.Session) (gotea.State, *gotea.Message) {
+	time.Sleep(1500 * time.Millisecond)
+	state := s.State.(Model)
+	state.Deck.flipAllBack()
+	return state, nil
 }
 
-func RemoveMatches(_ gotea.MessageArguments) gotea.Message {
-	return gotea.NewMsg(removeMatches, nil)
+func RemoveMatches(_ gotea.MessageArguments, s *gotea.Session) (gotea.State, *gotea.Message) {
+	time.Sleep(1500 * time.Millisecond)
+	state := s.State.(Model)
+	state.Deck.removeMatches()
+	return state, nil
 }
 
-// Messages
-
-func flipAllBack(_ gotea.MessageArguments, s *gotea.Session) {
-	s.State.(Model).Deck.flipAllBack()
-}
-
-func removeMatches(_ gotea.MessageArguments, s *gotea.Session) {
-	s.State.(Model).Deck.removeMatches()
-}
-
-// Actions
-
-func newDeck(n int) (deck Deck) {
+func NewDeck(n int) (deck Deck) {
 	cardValues := append([]int{}, append(rand.Perm(n), rand.Perm(n)...)...)
 	for _, v := range cardValues {
 		deck = append(deck, Card{v, false, false})

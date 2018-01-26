@@ -1,4 +1,13 @@
-package main
+package types
+
+// Model is the data to be maintained as state
+// - REQUIRED by gotea runtime
+type Model struct {
+	Deck              Deck
+	LastAttemptedCard int
+	TurnsTaken        int
+	Score             int
+}
 
 func (model *Model) takeTurn() {
 	model.TurnsTaken++
