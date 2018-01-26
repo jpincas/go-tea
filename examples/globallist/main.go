@@ -17,9 +17,10 @@ type Model struct {
 
 func init() {
 
-	gotea.App.Messages["add-coordinate"] = addCoordinate
+	// message function map
+	gotea.App.Messages["AddCoordinate"] = addCoordinate
 
-	// function that returns a new session
+	// session state seeder
 	gotea.App.NewSession = func() gotea.Session {
 		return gotea.Session{
 			State: Model{
@@ -28,7 +29,8 @@ func init() {
 		}
 	}
 
-	gotea.RegisterMessages(AddCoordinate)
+	// main view renderer
+	gotea.App.RenderView = WriteMain
 
 }
 
@@ -42,7 +44,7 @@ type Coordinate struct {
 var CoordinateDB []Coordinate
 
 // addCoordinate adds a random coordinate to the database
-func addCoordinate(_ gotea.MessageArguments, s *gotea.Session) {
+func addCoordinate(_ gotea.MessageArguments, s *gotea.Session) (gotea.State, *gotea.Message) {
 	// create new coordinate, add to 'database'
 	x := rand.Intn(100)
 	y := rand.Intn(100)
@@ -50,12 +52,18 @@ func addCoordinate(_ gotea.MessageArguments, s *gotea.Session) {
 
 	// broadcast to all active connections
 	gotea.App.Broadcast()
+
+	// since we don't mutate the session state or need to add any more messages
+	return s.State, nil
 }
 
 // Message generator
 
-func AddCoordinate(args gotea.MessageArguments) gotea.Message {
-	return gotea.NewMsg(addCoordinate, args)
+func AddCoordinate() gotea.Message {
+	return gotea.Message{
+		FuncCode:  "AddCoordinate",
+		Arguments: nil,
+	}
 }
 
 // MAIN

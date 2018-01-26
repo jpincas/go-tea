@@ -51,6 +51,17 @@ func (app Application) Broadcast() {
 
 // Start runs the application server
 func (app Application) Start(distDirectory string) {
+
+	// basic protection against an app forgetting to add newsession seeder and main view render function
+
+	if app.NewSession == nil {
+		log.Fatalln("ERROR: No session state seeder function specificied.  Exiting...")
+	}
+
+	if app.RenderView == nil {
+		log.Fatalln("Error: No main view render function set. Exiting...")
+	}
+
 	fs := http.FileServer(http.Dir(distDirectory))
 	http.HandleFunc("/server", handler)
 	http.Handle("/", fs)

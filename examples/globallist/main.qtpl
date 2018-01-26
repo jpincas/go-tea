@@ -1,0 +1,22 @@
+{% package main %} 
+{% import "github.com/jpincas/go-tea" %}
+
+{% func Main(s gotea.Session) %}
+
+<h1>Global List with Broadcast Example</h1>
+
+<button 
+    class='gotea-click'
+    data-msg='{%s gotea.Msg(AddCoordinate()) %}'>
+        Add a Random Coordinate
+</button>
+
+<h2>Here's a list of coordinates:</h2>
+
+<ul>
+    {% for _, thisCoordinate := range *s.State.(Model).Coordinates %}
+        <li>X: {%d thisCoordinate.X %}, Y: {%d thisCoordinate.Y %}</li>
+    {% endfor %}
+</ul>
+
+{% endfunc %}
