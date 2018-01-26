@@ -12,14 +12,14 @@ var toVNode = require("snabbdom/tovnode").default;
 
 var socket = new WebSocket(
   (window.location.protocol === "https:" ? "wss://" : "ws://") +
-    window.location.host +
-    "/server"
+  window.location.host +
+  "/server"
 );
 
 var container;
 var oldNode;
 
-socket.onmessage = function(event) {
+socket.onmessage = function (event) {
   var el = document.createElement("div");
   el.innerHTML = event.data;
   el.setAttribute("id", "view");
@@ -50,9 +50,41 @@ function sendMessage(element) {
 
 document.addEventListener(
   "click",
-  function(e) {
+  function (e) {
     if (/gotea-click/.test(e.target.className)) {
       sendMessage(e);
+    }
+  },
+  false
+);
+
+/*
+ * This is obviously similar to the above, however I think we have a real
+ * problem here, presumably we might have some elements to which we wish to
+ * attach multiple messages for different kinds of events. Eg. we might respond
+ * different to a focus event as to an input event, or a click event as to a
+ * hover event. Fortunately I think we can parameterise this somewhat by just
+ * including the name of the event in the name of the attribute.
+ */
+
+function onInputSendMessage(event) {
+  let _message = event.target.dataset.msg;
+  let message = {};
+  if (_message) {
+    message = JSON.parse(_message);
+  }
+  message['arguments'] = [event.target.value];
+  // message['arguments'].push(event.target.value);
+  console.log("Sending websocket message in onInputSendMessage: ", message);
+  var json = JSON.stringify(message);
+  socket.send(json);
+}
+
+document.addEventListener(
+  "input",
+  function (e) {
+    if (/gotea-input/.test(e.target.className)) {
+      onInputSendMessage(e);
     }
   },
   false
