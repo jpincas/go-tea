@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/jpincas/go-tea#readme",
   "dependencies": {
+    "form-serialize": "^0.7.2",
     "parcel-bundler": "^1.4.1",
     "snabbdom": "^0.7.1",
     "virtual-dom": "^2.1.1"

@@ -1,0 +1,21 @@
+{% package main %} 
+{% import "github.com/jpincas/go-tea" %}
+
+{% func Main(s gotea.Session) %}
+
+    <form>
+        First name:<br>
+        <input type="text" name="firstname" value="Mickey">
+        <br>
+        Last name:<br>
+        <input type="text" name="lastname" value="Mouse">
+        <br><br>
+        <button
+            type='button' 
+            class='gotea-form-submit'
+            data-msg='{%s gotea.Msg(SubmitForm()) %}'>
+                Submit
+        </button>
+    </form> 
+
+{% endfunc %}
