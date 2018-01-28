@@ -24,7 +24,7 @@ type Message struct {
 	FuncCode  string           `json:"func"`
 }
 
-// Process a message
+// Process a messages
 // - lookup the message in the App-level messages map
 // - if it is not found, return an error
 func (message Message) Process(session *Session) error {

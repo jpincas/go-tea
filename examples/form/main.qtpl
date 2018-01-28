@@ -14,8 +14,18 @@
             type='button' 
             class='gotea-form-submit'
             data-msg='{%s gotea.Msg(SubmitForm()) %}'>
-                Submit
+                Add Person
         </button>
-    </form> 
+    </form>
+
+    <div>
+        <h1>Here's who we know about...</h1>
+        <ul>
+            {% for _, person := range *s.State.(Model).People %}
+            <li>{%s person.FirstName %} {%s person.LastName %}</li>
+            {% endfor %}
+        </ul>
+
+    </div>
 
 {% endfunc %}

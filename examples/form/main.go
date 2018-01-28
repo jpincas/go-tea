@@ -1,13 +1,11 @@
 package main
 
 import (
-	"log"
-
 	gotea "github.com/jpincas/go-tea"
 )
 
 type Model struct {
-	Test string
+	People *[]Person
 }
 
 func init() {
@@ -19,7 +17,7 @@ func init() {
 	gotea.App.NewSession = func() gotea.Session {
 		return gotea.Session{
 			State: Model{
-				Test: "test",
+				People: &PeopleDB,
 			},
 		}
 	}
@@ -35,6 +33,8 @@ type Person struct {
 	FirstName, LastName string
 }
 
+var PeopleDB []Person
+
 func SubmitForm() gotea.Message {
 	return gotea.Message{
 		FuncCode: "SubmitForm",
@@ -42,8 +42,18 @@ func SubmitForm() gotea.Message {
 }
 
 func submitForm(formData gotea.MessageArguments, s *gotea.Session) (gotea.State, *gotea.Message) {
-	person := formData.(Person)
-	log.Println(person)
+	// JSON objects are unmarshalled as map[string]interface{}
+	// cast the messageArguments to that format
+	personData := formData.(map[string]interface{})
+
+	// now assign the Person struct by casting 1 by 1
+	newPerson := Person{
+		FirstName: personData["firstname"].(string),
+		LastName:  personData["lastname"].(string),
+	}
+
+	PeopleDB = append(PeopleDB, newPerson)
+
 	return s.State, nil
 }
 
