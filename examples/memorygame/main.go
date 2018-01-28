@@ -2,17 +2,11 @@ package main
 
 import (
 	gotea "github.com/jpincas/go-tea"
-	"github.com/jpincas/go-tea/examples/memorygame/messages"
 	"github.com/jpincas/go-tea/examples/memorygame/types"
 	"github.com/jpincas/go-tea/examples/memorygame/views"
 )
 
 func init() {
-
-	// 1) register message generators on the global message:function map
-	gotea.App.Messages[messages.FlipCard_] = types.FlipCard
-	gotea.App.Messages[messages.FlipAllBack_] = types.FlipAllBack
-	gotea.App.Messages[messages.RemoveMatches_] = types.RemoveMatches
 
 	// 2) register the function that returns a new session
 	gotea.App.NewSession = func() gotea.Session {

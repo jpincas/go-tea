@@ -1,6 +1,5 @@
 {% package views %} 
 
-{% import "github.com/jpincas/go-tea/examples/memorygame/messages" %}
 {% import "github.com/jpincas/go-tea/examples/memorygame/types" %}
 {% import "github.com/jpincas/go-tea" %} 
 
@@ -15,7 +14,7 @@
         {% if !thisCard.Matched %}
         <button 
             class='flipcard gotea-click'
-            data-msg='{%s gotea.Msg(messages.FlipCard(index)) %}'>
+            data-msg='{%s gotea.Msg(types.FlipCardMsg(index)) %}'>
             Flip
         </button>
         {% endif %}

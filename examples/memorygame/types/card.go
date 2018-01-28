@@ -2,7 +2,6 @@ package types
 
 import (
 	gotea "github.com/jpincas/go-tea"
-	"github.com/jpincas/go-tea/examples/memorygame/messages"
 )
 
 type Card struct {
@@ -23,13 +22,20 @@ func FlipCard(args gotea.MessageArguments, s *gotea.Session) (gotea.State, *gote
 
 		if state.Deck.hasFoundMatch() {
 			state.incrementScore()
-			nextMsg := messages.RemoveMatches()
-			return state, &nextMsg
+
+			return state, gotea.NextMsg(RemoveMatchesMsg())
 		}
 
-		nextMsg := messages.FlipAllBack()
-		return state, &nextMsg
+		return state, gotea.NextMsg(FlipAllBackMsg())
 	}
 
 	return state, nil
+}
+
+func FlipCardMsg(index int) gotea.Message {
+	return gotea.Message{
+		FuncCode:  "FlipCard",
+		Arguments: index,
+		Func:      FlipCard,
+	}
 }

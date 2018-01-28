@@ -17,9 +17,6 @@ type Model struct {
 
 func init() {
 
-	// message function map
-	gotea.App.Messages["AddCoordinate"] = addCoordinate
-
 	// session state seeder
 	gotea.App.NewSession = func() gotea.Session {
 		return gotea.Session{
@@ -63,6 +60,7 @@ func AddCoordinate() gotea.Message {
 	return gotea.Message{
 		FuncCode:  "AddCoordinate",
 		Arguments: nil,
+		Func:      addCoordinate,
 	}
 }
 

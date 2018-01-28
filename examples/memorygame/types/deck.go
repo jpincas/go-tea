@@ -16,11 +16,27 @@ func FlipAllBack(_ gotea.MessageArguments, s *gotea.Session) (gotea.State, *gote
 	return state, nil
 }
 
+func FlipAllBackMsg() gotea.Message {
+	return gotea.Message{
+		FuncCode:  "FlipAllBack",
+		Arguments: nil,
+		Func:      FlipAllBack,
+	}
+}
+
 func RemoveMatches(_ gotea.MessageArguments, s *gotea.Session) (gotea.State, *gotea.Message) {
 	time.Sleep(1500 * time.Millisecond)
 	state := s.State.(Model)
 	state.Deck.removeMatches()
 	return state, nil
+}
+
+func RemoveMatchesMsg() gotea.Message {
+	return gotea.Message{
+		FuncCode:  "RemoveMatches",
+		Arguments: nil,
+		Func:      RemoveMatches,
+	}
 }
 
 func NewDeck(n int) (deck Deck) {

@@ -10,9 +10,6 @@ type Model struct {
 
 func init() {
 
-	// message function map
-	gotea.App.Messages["SubmitForm"] = submitForm
-
 	// session state seeder
 	gotea.App.NewSession = func() gotea.Session {
 		return gotea.Session{
@@ -38,6 +35,7 @@ var PeopleDB []Person
 func SubmitForm() gotea.Message {
 	return gotea.Message{
 		FuncCode: "SubmitForm",
+		Func:     submitForm,
 	}
 }
 
