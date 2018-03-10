@@ -1,0 +1,15 @@
+{% package main %} 
+{% import "github.com/jpincas/go-tea" %}
+
+{% func Main(s gotea.Session) %}
+
+    <h1>Routing Example</h1>
+
+    <h2>Current route: {%s s.State.(Model).Route %}</h2>
+
+    <div>
+        <a class="gotea-link" href="/1">Page 1</a>
+        <a class="gotea-link" href="/2">Page 2</a>   
+    </div>
+
+{% endfunc %}

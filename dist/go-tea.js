@@ -165,7 +165,7 @@ var htmlDomApi = exports.htmlDomApi = {
 };
 exports.default = htmlDomApi;
 //# sourceMappingURL=htmldomapi.js.map
-},{}],18:[function(require,module,exports) {
+},{}],17:[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -230,7 +230,7 @@ function h(sel, b, c) {
 ;
 exports.default = h;
 //# sourceMappingURL=h.js.map
-},{"./vnode":14,"./is":15}],17:[function(require,module,exports) {
+},{"./vnode":14,"./is":15}],18:[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -287,7 +287,7 @@ var thunk = exports.thunk = function thunk(sel, key, fn, args) {
 };
 exports.default = thunk;
 //# sourceMappingURL=thunk.js.map
-},{"./h":18}],12:[function(require,module,exports) {
+},{"./h":17}],12:[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -608,7 +608,7 @@ function init(modules, domApi) {
   };
 }
 //# sourceMappingURL=snabbdom.js.map
-},{"./vnode":14,"./is":15,"./htmldomapi":16,"./h":18,"./thunk":17}],5:[function(require,module,exports) {
+},{"./vnode":14,"./is":15,"./htmldomapi":16,"./h":17,"./thunk":18}],5:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function updateClass(oldVnode, vnode) {
@@ -634,7 +634,7 @@ function updateClass(oldVnode, vnode) {
 exports.classModule = { create: updateClass, update: updateClass };
 exports.default = exports.classModule;
 //# sourceMappingURL=class.js.map
-},{}],6:[function(require,module,exports) {
+},{}],7:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function updateProps(oldVnode, vnode) {
@@ -661,7 +661,7 @@ function updateProps(oldVnode, vnode) {
 exports.propsModule = { create: updateProps, update: updateProps };
 exports.default = exports.propsModule;
 //# sourceMappingURL=props.js.map
-},{}],7:[function(require,module,exports) {
+},{}],6:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var raf = (typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout;
@@ -804,7 +804,7 @@ function updateAttrs(oldVnode, vnode) {
 exports.attributesModule = { create: updateAttrs, update: updateAttrs };
 exports.default = exports.attributesModule;
 //# sourceMappingURL=attributes.js.map
-},{}],10:[function(require,module,exports) {
+},{}],9:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function vnode(sel, data, children, text, elm) {
@@ -815,7 +815,7 @@ function vnode(sel, data, children, text, elm) {
 exports.vnode = vnode;
 exports.default = vnode;
 //# sourceMappingURL=vnode.js.map
-},{}],11:[function(require,module,exports) {
+},{}],10:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.array = Array.isArray;
@@ -884,7 +884,7 @@ exports.h = h;
 ;
 exports.default = h;
 //# sourceMappingURL=h.js.map
-},{"./vnode":10,"./is":11}],9:[function(require,module,exports) {
+},{"./vnode":9,"./is":10}],11:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function createElement(tagName) {
@@ -996,7 +996,7 @@ function toVNode(node, domApi) {
 exports.toVNode = toVNode;
 exports.default = toVNode;
 //# sourceMappingURL=tovnode.js.map
-},{"./vnode":10,"./htmldomapi":9}],13:[function(require,module,exports) {
+},{"./vnode":9,"./htmldomapi":11}],13:[function(require,module,exports) {
 // get successful control from form and assemble into object
 // http://www.w3.org/TR/html401/interact/forms.html#h-17.13.2
 
@@ -1350,4 +1350,27 @@ document.addEventListener(
   false
 );
 
-},{"snabbdom":12,"snabbdom/modules/class":5,"snabbdom/modules/props":6,"snabbdom/modules/style":7,"snabbdom/modules/attributes":8,"snabbdom/h":3,"snabbdom/tovnode":4,"form-serialize":13}]},{},[2])
+function sendRouteChangeMessage(element) {
+  let rel = element.target.getAttribute("href");
+  // update the browser url
+  history.pushState({}, "", rel);
+
+  let message = { func: "ChangeRoute", arguments: rel };
+
+  console.log("Sending websocket message: ", message);
+  socket.send(JSON.stringify(message));
+}
+
+document.addEventListener(
+  "click",
+  function(e) {
+    if (/gotea-link/.test(e.target.className)) {
+      sendRouteChangeMessage(e);
+      e.preventDefault();
+      return false;
+    }
+  },
+  false
+);
+
+},{"snabbdom":12,"snabbdom/modules/class":5,"snabbdom/modules/props":7,"snabbdom/modules/style":6,"snabbdom/modules/attributes":8,"snabbdom/h":3,"snabbdom/tovnode":4,"form-serialize":13}]},{},[2])
