@@ -1,4 +1,4 @@
-package types
+package main
 
 // Model is the data to be maintained as state
 // - REQUIRED by gotea runtime

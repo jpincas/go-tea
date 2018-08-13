@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "parcel build index.html --public-url ./ --no-minify"
+    "start": "parcel gotea.js --public-url ./",
+    "build": "parcel build gotea.js --public-url ./ --no-minify"
   },
   "repository": {
     "type": "git",
@@ -19,8 +20,9 @@
   "homepage": "https://github.com/jpincas/go-tea#readme",
   "dependencies": {
     "form-serialize": "^0.7.2",
-    "parcel-bundler": "^1.4.1",
-    "snabbdom": "^0.7.1",
-    "virtual-dom": "^2.1.1"
+    "morphdom": "^2.3.3"
+  },
+  "devDependencies": {
+    "parcel-bundler": "^1.9.7"
   }
 }

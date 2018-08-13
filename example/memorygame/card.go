@@ -1,4 +1,4 @@
-package types
+package main
 
 import (
 	gotea "github.com/jpincas/go-tea"
@@ -23,19 +23,17 @@ func FlipCard(args gotea.MessageArguments, s *gotea.Session) (gotea.State, *gote
 		if state.Deck.hasFoundMatch() {
 			state.incrementScore()
 
-			return state, gotea.NextMsg(RemoveMatchesMsg())
+			return state, &gotea.Message{
+				Message:   "REMOVE_MATCHES",
+				Arguments: nil,
+			}
 		}
 
-		return state, gotea.NextMsg(FlipAllBackMsg())
+		return state, &gotea.Message{
+			Message:   "FLIP_ALL_BACK",
+			Arguments: nil,
+		}
 	}
 
 	return state, nil
-}
-
-func FlipCardMsg(index int) gotea.Message {
-	return gotea.Message{
-		FuncCode:  "FlipCard",
-		Arguments: index,
-		Func:      FlipCard,
-	}
 }

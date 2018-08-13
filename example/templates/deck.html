@@ -1,0 +1,15 @@
+<div id="deck">
+    {{ range $index, $thisCard := . }}
+
+    <div class="card-container">
+        {{ template "card.html" $thisCard }}
+        <!-- spacer -->
+        {{ if not $thisCard.Matched }}
+        <button class='flipcard' onclick='gotea.sendMessage("FLIP_CARD", {{ $index }})'>
+            Flip
+        </button>
+        {{ end }}
+
+    </div>
+    {{ end }}
+</div>
