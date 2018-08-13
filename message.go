@@ -20,11 +20,12 @@ type MessageArguments interface{}
 // - the actual function is not de/serialised
 // - instead the string representing the functions name is de/serialised
 type Message struct {
-	Arguments MessageArguments `json:"arguments"`
-	FuncCode  string           `json:"func"`
+	Arguments MessageArguments                                   `json:"arguments"`
+	FuncCode  string                                             `json:"func"`
+	Func      func(MessageArguments, *Session) (State, *Message) `json:"-"`
 }
 
-// Process a message
+// Process a messages
 // - lookup the message in the App-level messages map
 // - if it is not found, return an error
 func (message Message) Process(session *Session) error {
@@ -56,6 +57,18 @@ func (message Message) Process(session *Session) error {
 // the idea is to use a message generator to create a message and pipe it
 // to this function for serialisation
 func Msg(message Message) string {
+
+	// register the message on the map
+	App.Messages[message.FuncCode] = message.Func
+
 	b, _ := json.Marshal(message)
 	return fmt.Sprintf("%s", b)
+}
+
+// utility function to use a message from application code
+// ensures that it is registered
+func NextMsg(message Message) *Message {
+	// register the message on the map
+	App.Messages[message.FuncCode] = message.Func
+	return &message
 }
