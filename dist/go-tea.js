@@ -608,7 +608,7 @@ function init(modules, domApi) {
   };
 }
 //# sourceMappingURL=snabbdom.js.map
-},{"./vnode":14,"./is":15,"./htmldomapi":16,"./h":17,"./thunk":18}],5:[function(require,module,exports) {
+},{"./vnode":14,"./is":15,"./htmldomapi":16,"./h":17,"./thunk":18}],7:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function updateClass(oldVnode, vnode) {
@@ -634,7 +634,7 @@ function updateClass(oldVnode, vnode) {
 exports.classModule = { create: updateClass, update: updateClass };
 exports.default = exports.classModule;
 //# sourceMappingURL=class.js.map
-},{}],7:[function(require,module,exports) {
+},{}],4:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function updateProps(oldVnode, vnode) {
@@ -661,7 +661,7 @@ function updateProps(oldVnode, vnode) {
 exports.propsModule = { create: updateProps, update: updateProps };
 exports.default = exports.propsModule;
 //# sourceMappingURL=props.js.map
-},{}],6:[function(require,module,exports) {
+},{}],5:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var raf = (typeof window !== 'undefined' && window.requestAnimationFrame) || setTimeout;
@@ -815,7 +815,7 @@ function vnode(sel, data, children, text, elm) {
 exports.vnode = vnode;
 exports.default = vnode;
 //# sourceMappingURL=vnode.js.map
-},{}],10:[function(require,module,exports) {
+},{}],11:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.array = Array.isArray;
@@ -824,7 +824,7 @@ function primitive(s) {
 }
 exports.primitive = primitive;
 //# sourceMappingURL=is.js.map
-},{}],3:[function(require,module,exports) {
+},{}],6:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var vnode_1 = require("./vnode");
@@ -884,7 +884,7 @@ exports.h = h;
 ;
 exports.default = h;
 //# sourceMappingURL=h.js.map
-},{"./vnode":9,"./is":10}],11:[function(require,module,exports) {
+},{"./vnode":9,"./is":11}],10:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 function createElement(tagName) {
@@ -951,7 +951,7 @@ exports.htmlDomApi = {
 };
 exports.default = exports.htmlDomApi;
 //# sourceMappingURL=htmldomapi.js.map
-},{}],4:[function(require,module,exports) {
+},{}],3:[function(require,module,exports) {
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var vnode_1 = require("./vnode");
@@ -996,7 +996,7 @@ function toVNode(node, domApi) {
 exports.toVNode = toVNode;
 exports.default = toVNode;
 //# sourceMappingURL=tovnode.js.map
-},{"./vnode":9,"./htmldomapi":11}],13:[function(require,module,exports) {
+},{"./vnode":9,"./htmldomapi":10}],13:[function(require,module,exports) {
 // get successful control from form and assemble into object
 // http://www.w3.org/TR/html401/interact/forms.html#h-17.13.2
 
@@ -1373,4 +1373,4 @@ document.addEventListener(
   false
 );
 
-},{"snabbdom":12,"snabbdom/modules/class":5,"snabbdom/modules/props":7,"snabbdom/modules/style":6,"snabbdom/modules/attributes":8,"snabbdom/h":3,"snabbdom/tovnode":4,"form-serialize":13}]},{},[2])
+},{"snabbdom":12,"snabbdom/modules/class":7,"snabbdom/modules/props":4,"snabbdom/modules/style":5,"snabbdom/modules/attributes":8,"snabbdom/h":6,"snabbdom/tovnode":3,"form-serialize":13}]},{},[2])
