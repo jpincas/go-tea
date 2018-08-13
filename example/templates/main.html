@@ -1,6 +1,24 @@
-<h2>Turns Taken: {{ .TurnsTaken }}</h2>
-<h2>Pairs Found: {{ .Score }}</h2>
+{{ if eq .Route "/home" }}
+<h2>This is the the homepage</h2>
+<p>Choose an example from the menu to get started...</p>
+{{ end }}
 
-{{ if .HasWon }} Well Done! You Won! {{ end }}
 <!-- spacer -->
-{{ template "deck.html" .Deck }}
+
+{{ if eq .Route "/memory-game" }} {{ template "memorygame.html" .MemoryGame }} {{ end }}
+
+<!-- spacer -->
+
+{{ if eq .Route "/form" }} form {{ end }}
+
+<!-- spacer -->
+
+{{ if eq .Route "/global-list" }} global list {{ end }}
+
+<!-- spacer -->
+
+{{ if eq .Route "/routing" }}
+<h2>Routing</h2>
+<p>The main navigation bar above is an example of GoTea routing.</p>
+<p>Clicking on any of the links triggers a "CHANGE_ROUTE" message to be sent, with the new route as an argument. The application code simply sets a state property according to the new route and the main template/view uses conditional rendering to carry on rendering the app with the correct template. Try it out!</p>
+{{ end }}

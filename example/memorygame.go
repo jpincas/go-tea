@@ -7,19 +7,77 @@ import (
 	gotea "github.com/jpincas/go-tea"
 )
 
+type MemoryGame struct {
+	Deck              Deck
+	LastAttemptedCard int
+	TurnsTaken        int
+	Score             int
+}
+
+func (m *MemoryGame) takeTurn() {
+	m.TurnsTaken++
+}
+
+func (m *MemoryGame) incrementScore() {
+	m.Score++
+}
+
+func (m MemoryGame) HasWon() bool {
+	for _, card := range m.Deck {
+		if !card.Matched {
+			return false
+		}
+	}
+	return true
+}
+
 type Deck []Card
+
+type Card struct {
+	Value   int
+	Flipped bool
+	Matched bool
+}
+
+func FlipCard(args gotea.MessageArguments, s *gotea.Session) (gotea.State, *gotea.Message) {
+	// cast the argument to int - comes back from JS as float64
+	cardToFlip := int(args.(float64))
+	state := s.State.(Model)
+
+	state.MemoryGame.Deck.flipCard(cardToFlip)
+
+	if state.MemoryGame.Deck.numberFlippedCards() == 2 {
+		state.MemoryGame.takeTurn()
+
+		if state.MemoryGame.Deck.hasFoundMatch() {
+			state.MemoryGame.incrementScore()
+
+			return state, &gotea.Message{
+				Message:   "REMOVE_MATCHES",
+				Arguments: nil,
+			}
+		}
+
+		return state, &gotea.Message{
+			Message:   "FLIP_ALL_BACK",
+			Arguments: nil,
+		}
+	}
+
+	return state, nil
+}
 
 func FlipAllBack(_ gotea.MessageArguments, s *gotea.Session) (gotea.State, *gotea.Message) {
 	time.Sleep(1500 * time.Millisecond)
 	state := s.State.(Model)
-	state.Deck.flipAllBack()
+	state.MemoryGame.Deck.flipAllBack()
 	return state, nil
 }
 
 func RemoveMatches(_ gotea.MessageArguments, s *gotea.Session) (gotea.State, *gotea.Message) {
 	time.Sleep(1500 * time.Millisecond)
 	state := s.State.(Model)
-	state.Deck.removeMatches()
+	state.MemoryGame.Deck.removeMatches()
 	return state, nil
 }
 

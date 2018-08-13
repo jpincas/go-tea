@@ -1,3 +1,35 @@
+body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+}
+
+/* Main */
+
+.navbar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    background: rgb(46, 36, 182);
+    color: white;
+}
+
+.navbar ul a{
+    text-decoration: none;
+    text-transform: uppercase;
+    color: white;
+}
+
+.navbar ul li {
+    padding: 10px;
+}
+
+#view {
+    padding: 10px;
+}
+
+/* Memory game */
+
 #deck {
     display: flex;
     flex-wrap: wrap;
@@ -6,17 +38,33 @@
 .card-container {
     display: flex;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 10px;
 }
 
 .card {
     width: 150px;
     height: 250px;
-    margin: 5px;
+    margin: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid grey;
+    border: none;
     border-radius: 5px;
+    background-color: silver;
+
+}
+
+button.flipcard {
+    padding: 10px;
+    width: 100px;
+    background-color: aqua;
+    text-transform: uppercase;
+    font-weight: 700;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
 }
 
 .card.unmatched {

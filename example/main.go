@@ -27,21 +27,30 @@ func parseTemplates() {
 	Templates = template.Must(template.New("main").Funcs(funcMap).ParseGlob("templates/*.html"))
 }
 
+type Model struct {
+	Route      string
+	MemoryGame MemoryGame
+}
+
 func main() {
 	// Register the function that returns a new session
 	gotea.App.NewSession = func() gotea.Session {
 		return gotea.Session{
 			State: Model{
-				Deck:              NewDeck(4),
-				TurnsTaken:        0,
-				LastAttemptedCard: 5, //hack
-				Score:             0,
+				Route: "/home",
+				MemoryGame: MemoryGame{
+					Deck:              NewDeck(4),
+					TurnsTaken:        0,
+					LastAttemptedCard: 5, //hack
+					Score:             0,
+				},
 			},
 		}
 	}
 
 	// gotea.App.Messages
 	gotea.App.Messages = gotea.MessageMap{
+		"CHANGE_ROUTE":   changeRoute,
 		"FLIP_CARD":      FlipCard,
 		"REMOVE_MATCHES": RemoveMatches,
 		"FLIP_ALL_BACK":  FlipAllBack,
@@ -55,4 +64,11 @@ func main() {
 
 	// Start the app
 	gotea.App.Start("dist", 8080)
+}
+
+func changeRoute(args gotea.MessageArguments, s *gotea.Session) (gotea.State, *gotea.Message) {
+	state := s.State.(Model)
+	newRoute := args.(string)
+	state.Route = newRoute
+	return state, nil
 }

@@ -83,25 +83,26 @@ window.gotea.sendMessage = sendMessage;
 //   false
 // );
 
-// function sendRouteChangeMessage(element) {
-//   let rel = element.target.getAttribute("href");
-//   // update the browser url
-//   history.pushState({}, "", rel);
+function changeRoute(route) {
+  history.pushState({}, "", route);
 
-//   let message = { func: "ChangeRoute", arguments: rel };
+  let msg = {
+    "message": "CHANGE_ROUTE",
+    "args": route
+  }
 
-//   console.log("Sending websocket message: ", message);
-//   socket.send(JSON.stringify(message));
-// }
+  console.log("Sending websocket message: ", msg);
+  socket.send(JSON.stringify(msg));
+}
 
-// document.addEventListener(
-//   "click",
-//   function (e) {
-//     if (/gotea-link/.test(e.target.className)) {
-//       sendRouteChangeMessage(e);
-//       e.preventDefault();
-//       return false;
-//     }
-//   },
-//   false
-// );
+document.addEventListener(
+  "click",
+  function (e) {
+    if (/gotea-link/.test(e.target.className)) {
+      e.preventDefault();
+      changeRoute(e.target.getAttribute("href"));
+      return false;
+    }
+  },
+  false
+);

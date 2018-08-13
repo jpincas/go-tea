@@ -10,20 +10,13 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func init() {
-	App.Sessions = SessionStore{}
-	App.Messages = MessageMap{}
-	App.ErrorTemplate = template.Must(template.New("error").Parse(`
-		<h1>Whoops!</h1>
-		<h2>There was a gotea runtime error</h2>
-		<hr />
-		<p>{{ .ErrorMessage }}</p>
-		`))
-}
-
 // APPLICATION
 
-var App Application
+var App Application = Application{
+	Sessions:      SessionStore{},
+	Messages:      MessageMap{},
+	ErrorTemplate: template.Must(template.New("error").Parse(errorTemplate)),
+}
 
 type Application struct {
 	ErrorTemplate *template.Template
@@ -221,6 +214,13 @@ func (message Message) Process(session *Session) error {
 }
 
 // ERROR
+
+var errorTemplate = `
+<h1>Whoops!</h1>
+<h2>There was a gotea runtime error</h2>
+<hr />
+<p>{{ .ErrorMessage }}</p>
+`
 
 // renderError renders a friendly error message in the browser
 func renderError(conn *websocket.Conn, err error) {
