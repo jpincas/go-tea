@@ -16,16 +16,9 @@ func renderView(state gotea.State) []byte {
 
 var Templates *template.Template
 
-func concat(s1, s2 string) string {
-	return s1 + s2
-}
-
 func parseTemplates() {
-	funcMap := template.FuncMap{
-		"concat": concat,
-	}
 
-	Templates = template.Must(template.New("main").Funcs(funcMap).ParseGlob("templates/*.html"))
+	Templates = template.Must(template.New("main").Funcs(gotea.TemplateHelpers).ParseGlob("templates/*.html"))
 }
 
 type Model struct {
