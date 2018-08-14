@@ -1065,6 +1065,13 @@ var serialize = require("form-serialize");
 
 var socket = new WebSocket((window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/server");
 
+socket.onopen = function () {
+  var path = window.location.pathname;
+  if (path != "/") {
+    changeRoute(path);
+  }
+};
+
 socket.onmessage = function (event) {
   swapDOM(event.data, "view");
 };

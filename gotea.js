@@ -4,10 +4,15 @@ import morphdom from "morphdom";
 // Websockets
 
 var socket = new WebSocket(
-  (window.location.protocol === "https:" ? "wss://" : "ws://") +
-  window.location.host +
-  "/server"
+  (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/server"
 );
+
+socket.onopen = function () {
+  let path = window.location.pathname;
+  if (path != "/") {
+    changeRoute(path)
+  }
+}
 
 socket.onmessage = function (event) {
   swapDOM(event.data, "view");
@@ -33,6 +38,8 @@ const sendMessage = (msgString, args) => {
 
 window.gotea = {};
 window.gotea.sendMessage = sendMessage;
+
+
 
 // function sendMessage(element) {
 //   let _message = element.target.dataset.msg;
