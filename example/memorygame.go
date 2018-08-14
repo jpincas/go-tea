@@ -39,10 +39,10 @@ type Card struct {
 	Matched bool
 }
 
-func FlipCard(args gotea.MessageArguments, s *gotea.Session) (gotea.State, *gotea.Message) {
+func FlipCard(args gotea.MessageArguments, s gotea.State) (gotea.State, *gotea.Message) {
 	// cast the argument to int - comes back from JS as float64
 	cardToFlip := int(args.(float64))
-	state := s.State.(Model)
+	state := s.(Model)
 
 	state.MemoryGame.Deck.flipCard(cardToFlip)
 
@@ -67,16 +67,16 @@ func FlipCard(args gotea.MessageArguments, s *gotea.Session) (gotea.State, *gote
 	return state, nil
 }
 
-func FlipAllBack(_ gotea.MessageArguments, s *gotea.Session) (gotea.State, *gotea.Message) {
-	time.Sleep(1500 * time.Millisecond)
-	state := s.State.(Model)
+func FlipAllBack(_ gotea.MessageArguments, s gotea.State) (gotea.State, *gotea.Message) {
+	time.Sleep(500 * time.Millisecond)
+	state := s.(Model)
 	state.MemoryGame.Deck.flipAllBack()
 	return state, nil
 }
 
-func RemoveMatches(_ gotea.MessageArguments, s *gotea.Session) (gotea.State, *gotea.Message) {
-	time.Sleep(1500 * time.Millisecond)
-	state := s.State.(Model)
+func RemoveMatches(_ gotea.MessageArguments, s gotea.State) (gotea.State, *gotea.Message) {
+	time.Sleep(500 * time.Millisecond)
+	state := s.(Model)
 	state.MemoryGame.Deck.removeMatches()
 	return state, nil
 }

@@ -66,8 +66,8 @@ func main() {
 	gotea.App.Start("dist", 8080)
 }
 
-func changeRoute(args gotea.MessageArguments, s *gotea.Session) (gotea.State, *gotea.Message) {
-	state := s.State.(Model)
+func changeRoute(args gotea.MessageArguments, s gotea.State) (gotea.State, *gotea.Message) {
+	state := s.(Model)
 	newRoute := args.(string)
 	state.Route = newRoute
 	return state, nil

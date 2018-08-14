@@ -6,7 +6,9 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strings"
 
+	"github.com/go-chi/chi"
 	"github.com/gorilla/websocket"
 )
 
@@ -36,11 +38,20 @@ func (app Application) Start(distDirectory string, port int) {
 		log.Fatalln("Error: No main view render function set. Exiting...")
 	}
 
-	fs := http.FileServer(http.Dir(distDirectory))
-	http.HandleFunc("/server", handler)
-	http.Handle("/", fs)
-	log.Println("Staring gotea app server...")
-	http.ListenAndServe(fmt.Sprintf(":%v", port), nil)
+	router := chi.NewRouter()
+	// Attach the websocket handler at /server
+	router.Get("/server", websocketHandler)
+
+	// Attach the static file serer at /dist
+	fileServer(router, "/"+distDirectory, http.Dir(distDirectory))
+
+	// For all other routes, serve index.html
+	router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, distDirectory+"/index.html")
+	})
+
+	log.Printf("Staring gotea app server on port %v", port)
+	http.ListenAndServe(fmt.Sprintf(":%v", port), router)
 }
 
 // Broadcast re-renders every active session
@@ -64,7 +75,7 @@ var upgrader = websocket.Upgrader{}
 // - waits for a message from the client
 // - sends the messages for processing
 // - waits again
-func handler(w http.ResponseWriter, r *http.Request) {
+func websocketHandler(w http.ResponseWriter, r *http.Request) {
 	// upgrade the connections
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -183,7 +194,7 @@ type Message struct {
 	Arguments MessageArguments `json:"args"`
 }
 
-type MessageHandler func(MessageArguments, *Session) (State, *Message)
+type MessageHandler func(MessageArguments, State) (State, *Message)
 type MessageMap map[string]MessageHandler
 
 // Process a messages
@@ -198,7 +209,7 @@ func (message Message) Process(session *Session) error {
 
 	// execute the function attached to the message
 	// supplying the tag as argument
-	newState, nextMessage := funcToExecute(message.Arguments, session)
+	newState, nextMessage := funcToExecute(message.Arguments, session.State)
 
 	// set new state and render
 	session.State = newState
@@ -241,23 +252,24 @@ func renderError(conn *websocket.Conn, err error) {
 	conn.WriteMessage(1, tpl.Bytes())
 }
 
-// FUTURE ROUTING CODE - LEAVE FOR NOW
+// FileServer conveniently sets up a http.FileServer handler to serve
+// static files from a http.FileSystem.
+// FileServer conveniently sets up a http.FileServer handler to serve
+// static files from a http.FileSystem.
+func fileServer(r chi.Router, path string, root http.FileSystem) {
+	if strings.ContainsAny(path, "{}*") {
+		panic("FileServer does not permit URL parameters.")
+	}
 
-// TODO:
-// USe this code for routing
-// http.HandleFunc("/server", handler)
-// http.HandleFunc("/", renderIndex)
-// log.Println("Staring gotea app server...")
-// http.ListenAndServe(fmt.Sprintf(":%v", app.Config.AppPort), nil)
+	fs := http.StripPrefix(path, http.FileServer(root))
 
-// func renderIndex(w http.ResponseWriter, r *http.Request) {
+	if path != "/" && path[len(path)-1] != '/' {
+		r.Get(path, http.RedirectHandler(path+"/", 301).ServeHTTP)
+		path += "/"
+	}
+	path += "*"
 
-// 	templateData := struct {
-// 		AppTitle string
-// 	}{
-// 		"gotea App",
-// 	}
-
-// 	App.IndexTemplate.Execute(w, templateData)
-
-// }
+	r.Get(path, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fs.ServeHTTP(w, r)
+	}))
+}

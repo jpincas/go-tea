@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "parcel static/index.html",
-    "build": "parcel build static/index.html"
+    "start": "parcel static/index.html --public-url /dist",
+    "build": "parcel build static/index.html --public-url /dist"
   },
   "author": "",
   "license": "ISC",
