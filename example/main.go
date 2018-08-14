@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"html/template"
 
 	gotea "github.com/jpincas/go-tea"
@@ -66,9 +67,14 @@ func main() {
 	gotea.App.Start("dist", 8080)
 }
 
-func changeRoute(args gotea.MessageArguments, s gotea.State) (gotea.State, *gotea.Message) {
+func changeRoute(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
 	state := s.(Model)
-	newRoute := args.(string)
+
+	var newRoute string
+	if err := json.Unmarshal(args, &newRoute); err != nil {
+		return state, nil, err
+	}
+
 	state.Route = newRoute
-	return state, nil
+	return state, nil, nil
 }

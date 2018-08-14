@@ -1,5 +1,5 @@
-/.cache
-/node_modules
+js/.cache
+js/node_modules
 
 /example/node_modules
 /example/.cache

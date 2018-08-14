@@ -1,5 +1,6 @@
-var serialize = require("form-serialize");
+// var serialize = require("form-serialize");
 import morphdom from "morphdom";
+import serialize from "form-serialize";
 
 // Websockets
 
@@ -24,7 +25,9 @@ socket.onmessage = function (event) {
 const swapDOM = (incomingHTML, containerID) => {
   var el1 = document.createElement('div');
   el1.innerHTML = incomingHTML;
-  morphdom(document.getElementById(containerID), el1, { "childrenOnly": true });
+  morphdom(document.getElementById(containerID), el1, {
+    "childrenOnly": true
+  });
 }
 
 const sendMessage = (msgString, args) => {
@@ -38,6 +41,22 @@ const sendMessage = (msgString, args) => {
 
 window.gotea = {};
 window.gotea.sendMessage = sendMessage;
+window.gotea.submitForm = submitForm;
+
+function submitForm(message, formID) {
+  let form = document.getElementById(formID);
+  let obj = serialize(form, {
+    hash: true
+  });
+
+  let msg = {
+    "message": message,
+    "args": obj
+  }
+
+  console.log("Sending websocket message: ", msg);
+  socket.send(JSON.stringify(msg));
+}
 
 
 

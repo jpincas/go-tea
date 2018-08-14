@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"math/rand"
 	"time"
 
@@ -39,12 +40,16 @@ type Card struct {
 	Matched bool
 }
 
-func FlipCard(args gotea.MessageArguments, s gotea.State) (gotea.State, *gotea.Message) {
-	// cast the argument to int - comes back from JS as float64
-	cardToFlip := int(args.(float64))
+func FlipCard(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
 	state := s.(Model)
+	
+	// cast the argument to int - comes back from JS as float64
+	var cardToFlip int
+	if err := json.Unmarshal(args, &cardToFlip); err != nil {
+		return state, nil, err
+	}
 
-	state.MemoryGame.Deck.flipCard(cardToFlip)
+	state.MemoryGame.Deck.flipCard(int(cardToFlip))
 
 	if state.MemoryGame.Deck.numberFlippedCards() == 2 {
 		state.MemoryGame.takeTurn()
@@ -55,30 +60,30 @@ func FlipCard(args gotea.MessageArguments, s gotea.State) (gotea.State, *gotea.M
 			return state, &gotea.Message{
 				Message:   "REMOVE_MATCHES",
 				Arguments: nil,
-			}
+			}, nil
 		}
 
 		return state, &gotea.Message{
 			Message:   "FLIP_ALL_BACK",
 			Arguments: nil,
-		}
+		}, nil
 	}
 
-	return state, nil
+	return state, nil, nil
 }
 
-func FlipAllBack(_ gotea.MessageArguments, s gotea.State) (gotea.State, *gotea.Message) {
+func FlipAllBack(_ json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
 	time.Sleep(500 * time.Millisecond)
 	state := s.(Model)
 	state.MemoryGame.Deck.flipAllBack()
-	return state, nil
+	return state, nil, nil
 }
 
-func RemoveMatches(_ gotea.MessageArguments, s gotea.State) (gotea.State, *gotea.Message) {
+func RemoveMatches(_ json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
 	time.Sleep(500 * time.Millisecond)
 	state := s.(Model)
 	state.MemoryGame.Deck.removeMatches()
-	return state, nil
+	return state, nil, nil
 }
 
 func NewDeck(n int) (deck Deck) {

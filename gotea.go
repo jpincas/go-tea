@@ -2,74 +2,166 @@ package gotea
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/go-chi/chi"
 	"github.com/gorilla/websocket"
 )
 
-// APPLICATION
+// The idea behind gotea is simple, but can take a bit of getting your head around.
+// The code is structured more like a story than regular code -
+// read along from top to bottom to understand how it works
 
-var App Application = Application{
-	Sessions:      SessionStore{},
-	Messages:      MessageMap{},
-	ErrorTemplate: template.Must(template.New("error").Parse(errorTemplate)),
+// The concepts of 'State' and 'Session' are fundamental to gotea.
+
+// State is private to each user (session) and is what is rendered
+// by the runtime on each update.
+// It can essentially be anything  - you define it as a struct in your application code.
+// Conventionally, you'd call it 'Model', but you don't have to!
+type State interface{}
+
+// Session is just a holder for a websocket connection (or more accurately, a pointer to one),
+// and a lump of state (see above).  When a client connects, a new session is opened with a pointer
+// to the websocker connection and the initial state (more on that later)
+type Session struct {
+	Conn  *websocket.Conn
+	State State
 }
 
-type Application struct {
-	ErrorTemplate *template.Template
-	Messages      MessageMap
-	Sessions      SessionStore
-	NewSession    func() Session
-	RenderView    func(State) []byte
+// SessionStore tracks a list of active sessions.  When a session is opened,
+// it gets added to the SessionStore.
+// When a session is closed, it gets removed.
+type SessionStore []*Session
+
+// newSession creates a new session, as outlined above.
+// It assigns the specified websocket connection to the session,
+// sets the initial state by calling a special function that your application needs
+// to provide (more on that later),
+// adds the session to the session store so we can keep track of it,
+// and finally, does an initial render (again, more on that coming up)
+func newSession(conn *websocket.Conn) (*Session, error) {
+	session := App.NewSession()
+	session.Conn = conn
+	session.add()
+
+	session.render()
+
+	return &session, nil
 }
 
-// Start runs the application server
-func (app Application) Start(distDirectory string, port int) {
-	if app.NewSession == nil {
-		log.Fatalln("ERROR: No session state seeder function specificied.  Exiting...")
-	}
-
-	if app.RenderView == nil {
-		log.Fatalln("Error: No main view render function set. Exiting...")
-	}
-
-	router := chi.NewRouter()
-	// Attach the websocket handler at /server
-	router.Get("/server", websocketHandler)
-
-	// Attach the static file serer at /dist
-	fileServer(router, "/"+distDirectory, http.Dir(distDirectory))
-
-	// For all other routes, serve index.html
-	router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, distDirectory+"/index.html")
-	})
-
-	log.Printf("Staring gotea app server on port %v", port)
-	http.ListenAndServe(fmt.Sprintf(":%v", port), router)
+// add simply updates the list of active sessions, as explained above.
+func (session *Session) add() {
+	App.Sessions = append(App.Sessions, session)
 }
 
-// Broadcast re-renders every active session
-func (app Application) Broadcast() {
-	for _, session := range app.Sessions {
-		if session.Conn != nil {
-			session.render()
+// remove, as you could expect, just removes the session from the session store.
+func (session *Session) remove() {
+	for i, stored := range App.Sessions {
+		if stored == session {
+			// safe delete NOT preserving order
+			// https://github.com/golang/go/wiki/SliceTricks
+			App.Sessions[i] = App.Sessions[len(App.Sessions)-1]
+			App.Sessions[len(App.Sessions)-1] = nil
+			App.Sessions = App.Sessions[:len(App.Sessions)-1]
 		}
 	}
 }
 
-// WEBSOCKET HANDLER
+// Here's where the magic starts to happen
 
-// prepare the upgrader for websocket connections
+// render takes the session state, runs it through the main view template
+// and renders it to the socket connection on the session -
+// this is what the client sees in their browser.
+// The JS part of gotea takes this HTML and patches it efficiently onto
+// the existing DOM, so the browser only updates what has actually changed
+func (session *Session) render() {
+	if session.Conn == nil {
+		// Oops! There's no socket connection
+		log.Println("Could not render, no socket to render to")
+		return
+	}
+
+	session.Conn.WriteMessage(1, App.RenderView(session.State))
+}
+
+// But on its own, the above would be quite boring,
+// it wouldn't allow for any interactivity.
+// Fortunately, interactivity is baked right into the gotea runime with 'Messages'
+
+// Message is a data structure that is triggered in JS in the browser,
+// and send through the open websocket connection to the gotea runtime.
+// It's quite simple and consists of just two pieces of information:
+// 1 - the name of the message (a string)
+// 2 - some optional accompanying data (JSON)
+type Message struct {
+	Message   string          `json:"message"`
+	Arguments json.RawMessage `json:"args"`
+}
+
+// gotea is all about state.
+// Messages arriving at the runtime are handled by
+
+// MessageHandler functions which can do absolutely anything
+// as long as they return a new state.
+// Typically they would be used to make some sort of mutation.
+// They can optioally send back another 'Message' to the runtime,
+// which will be processed in turn,
+// effectively setting off a chain
+type MessageHandler func(json.RawMessage, State) (State, *Message, error)
+
+// Your application, then, will define a set of message handling functions
+// that will be called in response to incoming messages.
+
+// MessageMap holds a record of MessageHandler functions keyed against message.
+// This enables the runtime to look up the correct function to execute for each message received.
+type MessageMap map[string]MessageHandler
+
+// Process does the actual work of dealing with an incoming message.
+// It checks to make sure a message handling function is assigned to that message,
+// raising an error if not.
+// Assuming a message handling function is found, it is executed,
+// resulting in a new state.  This new state is set on the session,
+// and any further messages are sent for processing in the same way (recursively).
+// Finally, a render of the new state takes place, sending new HTML down the websocket to the client,
+// and starting the cycle again.
+func (message Message) Process(session *Session) error {
+	funcToExecute, found := App.Messages[message.Message]
+	if !found {
+		return fmt.Errorf("Could not process message %s: message does not exist", message.Message)
+	}
+
+	newState, nextMessage, err := funcToExecute(message.Arguments, session.State)
+
+	if err != nil {
+		return err
+	}
+
+	session.State = newState
+	session.render()
+
+	// TODO: new thread?
+	if nextMessage != nil {
+		nextMessage.Process(session)
+	}
+
+	return nil
+}
+
+// How do we wire this whole thing up?
+// We'll need a server to serve a single endpoint.
+// The handler for that endpoint will do the work
+// of establishing the websocket connection and running the infinite
+// loop until disconnection.
+
+// upgrader prepares the upgrader for websocket connections
 var upgrader = websocket.Upgrader{}
 
-// handler is the function called when a client connects:
-// - it is basically the core of the runtime
+// websocketHandler is the handler function called when a client connects.
+// It is basically the core of the runtime.  Here's what it does:
 // - upgrades the connection to a websocket
 // - creates a new session and adds it to the list of active sessions
 // - waits for a message from the client
@@ -113,119 +205,69 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// SESSIONS
+// OK, that's pretty much it.
+// All that's left now is to bring all this together and start the server
+// Application is the holder for all the bits and pieces go-tea needs
+type Application struct {
+	// ErrorTemplate is the system template for rendering all errors
+	ErrorTemplate *template.Template
 
-// State is the per session model that is rerendered on every cycle
-// - it can essentially be anything
-// - conventionally you would define it a as Model in your app
-type State interface{}
+	// MessageMap is the global map of messages -> message handling functions
+	Messages MessageMap
 
-// Session is a combination of a websocket connection and some client state
-// - the state is a Model, and is defined specifically by your app
-type Session struct {
-	Conn  *websocket.Conn
-	State State
+	// Sessions is a list of the current active sessions
+	Sessions SessionStore
+
+	// NewSession is the function assigned by our application
+	// to initialise a new sesson with a default initial state.
+	NewSession func() Session
+
+	// RenderView is the main render function
+	// that turns state into HTML to be sent to the client
+	RenderView func(State) []byte
 }
 
-// SessionStore tracks a list of active sessions
-type SessionStore []*Session
-
-// newSession creates a new session
-// - assigns the specified websocket connection to the session
-// - sets the intial stats by calling the app specific initialState()
-// - saves the sessions
-func newSession(conn *websocket.Conn) (*Session, error) {
-	// create the session from seed state, add the connection
-	// and add the session to the active sessions list
-	session := App.NewSession()
-	session.Conn = conn
-	session.add()
-
-	// render the initial state straight away
-	session.render()
-
-	return &session, nil
+// App kicks everything off, holding the global application state
+var App Application = Application{
+	Sessions:      SessionStore{},
+	Messages:      MessageMap{},
+	ErrorTemplate: template.Must(template.New("error").Parse(errorTemplate)),
 }
 
-// add updates the list of active sessions
-func (session *Session) add() {
-	App.Sessions = append(App.Sessions, session)
-}
-
-// remove a session from the active session list
-// when its connection expires
-func (session *Session) remove() {
-	for i, stored := range App.Sessions {
-		if stored == session {
-			// safe delete NOT preserving order
-			// https://github.com/golang/go/wiki/SliceTricks
-			App.Sessions[i] = App.Sessions[len(App.Sessions)-1]
-			App.Sessions[len(App.Sessions)-1] = nil
-			App.Sessions = App.Sessions[:len(App.Sessions)-1]
-		}
-	}
-}
-
-// render takes the session state, runs it through the main view template
-// and renders it to the socket connection on the session
-func (session *Session) render() {
-	if session.Conn == nil {
-		// Oops! There's no socket connection
-		log.Println("Could not render, no socket to render to")
-		return
+// And finally you are ready to start gotea.
+// Start creates the router, and serves it!
+func (app Application) Start(distDirectory string, port int) {
+	if app.NewSession == nil {
+		log.Fatalln("ERROR: No session state seeder function specificied.  Exiting...")
 	}
 
-	// render the state to the websocket connection
-	session.Conn.WriteMessage(1, App.RenderView(session.State))
-}
-
-// MESSAGES
-
-// MessageArguments are the parameters used in messages
-// - they can essentially be anything
-// - they are serialised and deserialised to JSON
-type MessageArguments interface{}
-
-// Msg repesents is the data envelope for a message
-// - the actual function is not de/serialised
-// - instead the string representing the functions name is de/serialised
-type Message struct {
-	Message   string           `json:"message"`
-	Arguments MessageArguments `json:"args"`
-}
-
-type MessageHandler func(MessageArguments, State) (State, *Message)
-type MessageMap map[string]MessageHandler
-
-// Process a messages
-// - lookup the message in the App-level messages map
-// - if it is not found, return an error
-func (message Message) Process(session *Session) error {
-	// check that the message exists, return an error if not
-	funcToExecute, found := App.Messages[message.Message]
-	if !found {
-		return fmt.Errorf("Could not process message %s: message does not exist", message.Message)
+	if app.RenderView == nil {
+		log.Fatalln("Error: No main view render function set. Exiting...")
 	}
 
-	// execute the function attached to the message
-	// supplying the tag as argument
-	newState, nextMessage := funcToExecute(message.Arguments, session.State)
+	router := chi.NewRouter()
+	// Attach the websocket handler at /server
+	router.Get("/server", websocketHandler)
 
-	// set new state and render
-	session.State = newState
-	session.render()
+	// Attach the static file serer at /dist
+	fileServer(router, "/"+distDirectory, http.Dir(distDirectory))
 
-	// if there is another message o process, do it now
-	// Question: new thread?
-	if nextMessage != nil {
-		nextMessage.Process(session)
-	}
+	// For all other routes, serve index.html
+	router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, distDirectory+"/index.html")
+	})
 
-	return nil
+	log.Printf("Staring gotea app server on port %v", port)
+	http.ListenAndServe(fmt.Sprintf(":%v", port), router)
 }
 
-// ERROR
+// That's all the important stuff.
+// There are just a few other odds and ends.
 
+// Error handling at various points in the gotea runtime is handled by a simple
+// error rendering procedure.
+
+// errorTemplate is the HTML used to render errors
 var errorTemplate = `
 <h1>Whoops!</h1>
 <h2>There was a gotea runtime error</h2>
@@ -233,7 +275,7 @@ var errorTemplate = `
 <p>{{ .ErrorMessage }}</p>
 `
 
-// renderError renders a friendly error message in the browser
+// renderError renders the above error template
 func renderError(conn *websocket.Conn, err error) {
 	if conn == nil {
 		// Oops! There's no socket connection
@@ -252,24 +294,15 @@ func renderError(conn *websocket.Conn, err error) {
 	conn.WriteMessage(1, tpl.Bytes())
 }
 
-// FileServer conveniently sets up a http.FileServer handler to serve
-// static files from a http.FileSystem.
-// FileServer conveniently sets up a http.FileServer handler to serve
-// static files from a http.FileSystem.
-func fileServer(r chi.Router, path string, root http.FileSystem) {
-	if strings.ContainsAny(path, "{}*") {
-		panic("FileServer does not permit URL parameters.")
+// That's all there is to error handling.
+
+// If your application needs to rerender all active sessions
+// because of some change in global state, there's an easy function for that
+// Broadcast re-renders every active session
+func (app Application) Broadcast() {
+	for _, session := range app.Sessions {
+		if session.Conn != nil {
+			session.render()
+		}
 	}
-
-	fs := http.StripPrefix(path, http.FileServer(root))
-
-	if path != "/" && path[len(path)-1] != '/' {
-		r.Get(path, http.RedirectHandler(path+"/", 301).ServeHTTP)
-		path += "/"
-	}
-	path += "*"
-
-	r.Get(path, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fs.ServeHTTP(w, r)
-	}))
 }
