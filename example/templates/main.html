@@ -21,4 +21,10 @@
 <h2>Routing</h2>
 <p>The main navigation bar above is an example of GoTea routing.</p>
 <p>Clicking on any of the links triggers a "CHANGE_ROUTE" message to be sent, with the new route as an argument. The application code simply sets a state property according to the new route and the main template/view uses conditional rendering to carry on rendering the app with the correct template. Try it out!</p>
+<p>Here's a template generated link:</p>
+
+{{ goteaLink `/memory-game` `Memory Game` `` }}
+
+<!-- spacer -->
+
 {{ end }}
