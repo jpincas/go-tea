@@ -257,7 +257,6 @@ func (app Application) Start(distDirectory string, port int) {
 		http.ServeFile(w, r, distDirectory+"/index.html")
 	})
 
-	log.Printf("Staring gotea app server on port %v", port)
 	http.ListenAndServe(fmt.Sprintf(":%v", port), router)
 }
 
