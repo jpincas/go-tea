@@ -250,7 +250,7 @@ func (app Application) Start(distDirectory string, port int) {
 	router.Get("/server", websocketHandler)
 
 	// Attach the static file serer at /dist
-	fileServer(router, "/"+distDirectory, http.Dir(distDirectory))
+	fileServer(router, "/dist", http.Dir(distDirectory))
 
 	// For all other routes, serve index.html
 	router.Get("/*", func(w http.ResponseWriter, r *http.Request) {

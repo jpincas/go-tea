@@ -30,6 +30,7 @@ const swapDOM = (incomingHTML, containerID) => {
   });
 }
 
+
 const sendMessage = (msgString, args) => {
   let msg = {
     "message": msgString,
@@ -38,10 +39,6 @@ const sendMessage = (msgString, args) => {
   console.log("Sending websocket message: ", msg);
   socket.send(JSON.stringify(msg));
 }
-
-window.gotea = {};
-window.gotea.sendMessage = sendMessage;
-window.gotea.submitForm = submitForm;
 
 function submitForm(message, formID) {
   let form = document.getElementById(formID);
@@ -58,6 +55,31 @@ function submitForm(message, formID) {
   socket.send(JSON.stringify(msg));
 }
 
+const sendMessageDebounce = debounce(sendMessage, 200);
+const submitFormDebounce = debounce(submitForm, 200);
+
+
+window.gotea = {};
+window.gotea.sendMessage = sendMessageDebounce;
+window.gotea.submitForm = submitFormDebounce;
+
+
+
+function debounce(func, wait, immediate) {
+  var timeout;
+  return function () {
+    var context = this,
+      args = arguments;
+    var later = function () {
+      timeout = null;
+      if (!immediate) func.apply(context, args);
+    };
+    var callNow = immediate && !timeout;
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+    if (callNow) func.apply(context, args);
+  };
+};
 
 
 // function sendMessage(element) {
