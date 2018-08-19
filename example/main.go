@@ -2,15 +2,23 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"html/template"
+	"strings"
 
 	gotea "github.com/jpincas/go-tea"
 	"github.com/jpincas/go-tea/components/tagselector"
 )
 
 func renderView(state gotea.State) []byte {
+	template := strings.Trim(state.GetRoute(), "/") + ".html"
+
 	buf := bytes.Buffer{}
-	Templates.ExecuteTemplate(&buf, "main.html", state)
+	err := Templates.ExecuteTemplate(&buf, template, state)
+	if err != nil {
+		return []byte(fmt.Sprintf("Executing template %s. Error: %v", template, err))
+	}
+
 	return buf.Bytes()
 }
 
@@ -23,18 +31,9 @@ func parseTemplates() {
 }
 
 type Model struct {
-	Route       string
+	*gotea.Router
 	MemoryGame  MemoryGame
 	TagSelector tagselector.Model
-}
-
-func (m Model) SetRoute(newRoute string) gotea.State {
-	m.Route = newRoute
-	return m
-}
-
-func (m Model) GetRoute() string {
-	return m.Route
 }
 
 func main() {
@@ -42,7 +41,9 @@ func main() {
 	gotea.App.NewSession = func() gotea.Session {
 		return gotea.Session{
 			State: Model{
-				Route: "/home",
+				Router: &gotea.Router{
+					Route: "/home",
+				},
 				MemoryGame: MemoryGame{
 					Deck:              NewDeck(4),
 					TurnsTaken:        0,
