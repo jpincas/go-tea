@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"strings"
 
 	gotea "github.com/jpincas/go-tea"
 	"github.com/jpincas/go-tea/components/tagselector"
 )
 
 func renderView(state gotea.State) []byte {
-	template := strings.Trim(state.GetRoute(), "/") + ".html"
+	template := state.RouteTemplate("html")
 
 	buf := bytes.Buffer{}
 	err := Templates.ExecuteTemplate(&buf, template, state)

@@ -2,11 +2,15 @@ package gotea
 
 import (
 	"encoding/json"
+	"net/url"
+	"strings"
 )
 
 type Routable interface {
 	SetRoute(string)
-	GetRoute() string
+	BaseRoute() string
+	RouteTemplate(string) string
+	RouteParam(string) string
 }
 
 type Router struct {
@@ -17,8 +21,29 @@ func (r *Router) SetRoute(newRoute string) {
 	r.Route = newRoute
 }
 
-func (r Router) GetRoute() string {
-	return r.Route
+func (r Router) BaseRoute() string {
+	trimmed := strings.Trim(r.Route, "/")
+	base := strings.Split(trimmed, "/")[0]
+
+	paramsIndex := strings.Index(base, "?")
+	if paramsIndex == -1 {
+		return base
+	}
+
+	return base[0:paramsIndex]
+}
+
+func (r Router) RouteTemplate(extension string) string {
+	return r.BaseRoute() + "." + extension
+}
+
+func (r Router) RouteParam(param string) string {
+	rel, err := url.Parse(r.Route)
+	if err != nil {
+		return ""
+	}
+
+	return rel.Query().Get(param)
 }
 
 func changeRoute(args json.RawMessage, s State) (State, *Message, error) {

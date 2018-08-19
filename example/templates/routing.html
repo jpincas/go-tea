@@ -7,8 +7,24 @@
 
 <h3>Subroutes</h3>
 
+<p>Subroutes triggered by route paramaters</p>
+
 {{ goteaLink `/routing?tab=1` `Tab 1` `` }}
 <!-- spacer -->
 {{ goteaLink `/routing?tab=2` `Tab 2` `` }}
 <!-- space -->
 {{ goteaLink `/routing?tab=3` `Tab 3` `` }}
+
+
+<!-- space -->
+{{ $tab := .RouteParam `tab` }}
+<div>
+    {{ if eq $tab `1` }}
+    <h1>Woohoo! Tab 1</h1> {{ end }}
+    <!-- space -->
+    {{ if eq $tab `2` }}
+    <h1>Woohoo! Tab 2</h1> {{ end }}
+    <!-- space -->
+    {{ if eq $tab `3` }}
+    <h1>Woohoo! Tab 3</h1> {{ end }}
+</div>
