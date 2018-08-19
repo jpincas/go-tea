@@ -13,12 +13,14 @@ State: MyAppModel{
 
 - Override the blank message handler for each message, probably in an init() function somewhere.
 
-- Merge in the component's message map, e.g. ```
+- Merge in the component's message map, e.g. 
+```
 	gotea.App.Messages.
 		MergeMap(myComponent.Messages)
 ```
 
-- Use it: ```
+- Use it: 
+```
 {{ template "mycomponent.html" .MyComponentState }}
 
 ```
