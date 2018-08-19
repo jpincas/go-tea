@@ -17,6 +17,10 @@
 
 <!-- spacer -->
 
+{{ if eq .Route "/components" }} {{ template "components.html" . }} {{ end }}
+
+<!-- spacer -->
+
 {{ if eq .Route "/routing" }}
 <h2>Routing</h2>
 <p>The main navigation bar above is an example of GoTea routing.</p>

@@ -1,0 +1,21 @@
+<h3>Tag Selector</h3>
+
+<div>
+    <h4>Available Tags:</h4>
+    <ul>
+        {{ range .AvailableTags }}
+        <li onclick='{{ goteaMessage `TAGSELECTOR_SELECTTAG` . }}'>
+            {{ . }}
+        </li>
+        {{ end }}
+    </ul>
+</div>
+
+<div>
+    <h4>Selected Tags:</h4>
+    <ul>
+        {{ range .SelectedTags }}
+        <li>{{ . }}</li>
+        {{ end }}
+    </ul>
+</div>

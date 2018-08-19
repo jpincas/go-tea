@@ -5,6 +5,7 @@ import (
 	"html/template"
 
 	gotea "github.com/jpincas/go-tea"
+	"github.com/jpincas/go-tea/components/tagselector"
 )
 
 func renderView(state gotea.State) []byte {
@@ -16,13 +17,15 @@ func renderView(state gotea.State) []byte {
 var Templates *template.Template
 
 func parseTemplates() {
-
 	Templates = template.Must(template.New("main").Funcs(gotea.TemplateHelpers).ParseGlob("templates/*.html"))
+
+	template.Must(Templates.ParseGlob("../components/*/*.html"))
 }
 
 type Model struct {
-	Route      string
-	MemoryGame MemoryGame
+	Route       string
+	MemoryGame  MemoryGame
+	TagSelector tagselector.Model
 }
 
 func (m Model) SetRoute(newRoute string) gotea.State {
@@ -46,13 +49,16 @@ func main() {
 					LastAttemptedCard: 5, //hack
 					Score:             0,
 				},
+				TagSelector: tagselector.Model{
+					AvailableTags: []string{"tag1", "tag2", "tag3"},
+				},
 			},
 		}
 	}
 
-	// gotea.App.Messages
 	gotea.App.Messages.
-		MergeMap(memoryGameMessages)
+		MergeMap(memoryGameMessages).
+		MergeMap(tagselector.Messages)
 
 	// Parse templates
 	parseTemplates()
