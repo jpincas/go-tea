@@ -22,7 +22,9 @@ import (
 // by the runtime on each update.
 // It can essentially be anything  - you define it as a struct in your application code.
 // Conventionally, you'd call it 'Model', but you don't have to!
-type State interface{}
+// The only requirement is that the state you define should be able to set and get a 'route' - predictably used for routing.
+// Typically, you do that by including a 'route' field on your state and then define 'SetState()' and 'GetState()' on your model.  This will cause your app to respond correctly to in-built routing messages.
+type State Routable
 
 // Session is just a holder for a websocket connection (or more accurately, a pointer to one),
 // and a lump of state (see above).  When a client connects, a new session is opened with a pointer
@@ -207,6 +209,7 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 
 // OK, that's pretty much it.
 // All that's left now is to bring all this together and start the server
+
 // Application is the holder for all the bits and pieces go-tea needs
 type Application struct {
 	// ErrorTemplate is the system template for rendering all errors
@@ -228,13 +231,21 @@ type Application struct {
 }
 
 // App kicks everything off, holding the global application state
-var App Application = Application{
-	Sessions:      SessionStore{},
-	Messages:      MessageMap{},
+var App = Application{
+	Sessions: SessionStore{},
+	// Rather than starting with a completely blank maessage map,
+	// we start with some built in go-tea messages.
+	// Therefore, when defining your application message map, you will ADD
+	// it to this existing map, rather than overwrite it.
+	// gotea provides the ''MergeMap' method on MessageMap for that!
+	Messages: MessageMap{
+		"CHANGE_ROUTE": changeRoute,
+	},
 	ErrorTemplate: template.Must(template.New("error").Parse(errorTemplate)),
 }
 
 // And finally you are ready to start gotea.
+
 // Start creates the router, and serves it!
 func (app Application) Start(distDirectory string, port int) {
 	if app.NewSession == nil {
@@ -297,6 +308,7 @@ func renderError(conn *websocket.Conn, err error) {
 
 // If your application needs to rerender all active sessions
 // because of some change in global state, there's an easy function for that
+
 // Broadcast re-renders every active session
 func (app Application) Broadcast() {
 	for _, session := range app.Sessions {

@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"html/template"
 
 	gotea "github.com/jpincas/go-tea"
@@ -26,6 +25,15 @@ type Model struct {
 	MemoryGame MemoryGame
 }
 
+func (m Model) SetRoute(newRoute string) gotea.State {
+	m.Route = newRoute
+	return m
+}
+
+func (m Model) GetRoute() string {
+	return m.Route
+}
+
 func main() {
 	// Register the function that returns a new session
 	gotea.App.NewSession = func() gotea.Session {
@@ -43,12 +51,8 @@ func main() {
 	}
 
 	// gotea.App.Messages
-	gotea.App.Messages = gotea.MessageMap{
-		"CHANGE_ROUTE":   changeRoute,
-		"FLIP_CARD":      FlipCard,
-		"REMOVE_MATCHES": RemoveMatches,
-		"FLIP_ALL_BACK":  FlipAllBack,
-	}
+	gotea.App.Messages.
+		MergeMap(memoryGameMessages)
 
 	// Parse templates
 	parseTemplates()
@@ -58,16 +62,4 @@ func main() {
 
 	// Start the app
 	gotea.App.Start("dist", 8080)
-}
-
-func changeRoute(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
-	state := s.(Model)
-
-	var newRoute string
-	if err := json.Unmarshal(args, &newRoute); err != nil {
-		return state, nil, err
-	}
-
-	state.Route = newRoute
-	return state, nil, nil
 }

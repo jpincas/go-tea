@@ -8,6 +8,12 @@ import (
 	gotea "github.com/jpincas/go-tea"
 )
 
+var memoryGameMessages gotea.MessageMap = gotea.MessageMap{
+	"FLIP_CARD":      FlipCard,
+	"REMOVE_MATCHES": RemoveMatches,
+	"FLIP_ALL_BACK":  FlipAllBack,
+}
+
 type MemoryGame struct {
 	Deck              Deck
 	LastAttemptedCard int
@@ -42,7 +48,7 @@ type Card struct {
 
 func FlipCard(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
 	state := s.(Model)
-	
+
 	// cast the argument to int - comes back from JS as float64
 	var cardToFlip int
 	if err := json.Unmarshal(args, &cardToFlip); err != nil {
