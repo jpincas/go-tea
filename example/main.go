@@ -73,5 +73,6 @@ func main() {
 	gotea.App.RenderView = renderView
 
 	// Start the app
+	fmt.Println("starting server")
 	gotea.App.Start("dist", 8080)
 }
