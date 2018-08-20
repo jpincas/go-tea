@@ -64,8 +64,8 @@ func main() {
 	gotea.App.Messages.
 		MergeMap(memoryGameMessages).
 		MergeMap(formMessages).
-		MergeMap(nameSelectorMsgMap).
-		MergeMap(teamSelectorMsgMap)
+		MergeMap(nameSelector.MessageMap(nameSelectorMessages)).
+		MergeMap(teamSelector.MessageMap(teamSelectorMessages))
 
 	// Parse templates
 	parseTemplates()

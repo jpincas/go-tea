@@ -7,6 +7,8 @@ import (
 	"github.com/jpincas/go-tea/components/tagselector"
 )
 
+// Name Selector (instantiation of Tag Selector)
+
 var nameSelector = tagselector.Model{
 	Component: gotea.Component{
 		UniqueID: "NAMESELECTOR",
@@ -14,19 +16,8 @@ var nameSelector = tagselector.Model{
 	AvailableTags: []string{"Jon", "Allan", "Piotr"},
 }
 
-var teamSelector = tagselector.Model{
-	Component: gotea.Component{
-		UniqueID: "TEAMSELECTOR",
-	},
-	AvailableTags: []string{"Arsenal", "Man City", "Real Madrid"},
-}
-
-var nameSelectorMsgMap = gotea.MessageMap{
-	nameSelector.UniqueMsg(tagselector.MsgSelectTag): nameSelectorSelectTag,
-}
-
-var teamSelectorMsgMap = gotea.MessageMap{
-	teamSelector.UniqueMsg(tagselector.MsgSelectTag): teamSelectorSelectTag,
+var nameSelectorMessages = map[string]gotea.MessageHandler{
+	tagselector.MsgSelectTag: nameSelectorSelectTag,
 }
 
 func nameSelectorSelectTag(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
@@ -39,6 +30,19 @@ func nameSelectorSelectTag(args json.RawMessage, s gotea.State) (gotea.State, *g
 
 	state.NameSelector.SelectTag(tag)
 	return state, nil, nil
+}
+
+// Team Selector (instantiation of Tag Selector)
+
+var teamSelector = tagselector.Model{
+	Component: gotea.Component{
+		UniqueID: "TEAMSELECTOR",
+	},
+	AvailableTags: []string{"Arsenal", "Man City", "Real Madrid"},
+}
+
+var teamSelectorMessages = map[string]gotea.MessageHandler{
+	tagselector.MsgSelectTag: teamSelectorSelectTag,
 }
 
 func teamSelectorSelectTag(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
