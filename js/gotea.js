@@ -55,13 +55,29 @@ function submitForm(message, formID) {
   socket.send(JSON.stringify(msg));
 }
 
+function sendMessageWithValue(message, inputID) {
+  let value = document.getElementById(inputID).value;
+
+  let msg = {
+    "message": message,
+    "args": value
+  }
+
+  console.log("Sending websocket message: ", msg);
+  socket.send(JSON.stringify(msg));
+}
+
 const sendMessageDebounce = debounce(sendMessage, 200);
 const submitFormDebounce = debounce(submitForm, 200);
+const sendMessageWithValueDebounce = debounce(sendMessageWithValue, 200);
+
 
 
 window.gotea = {};
 window.gotea.sendMessage = sendMessageDebounce;
 window.gotea.submitForm = submitFormDebounce;
+window.gotea.sendMessageWithValue = sendMessageWithValueDebounce;
+
 
 
 

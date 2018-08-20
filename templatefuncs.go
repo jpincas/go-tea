@@ -13,6 +13,7 @@ var TemplateHelpers = template.FuncMap{
 	"goteaMessage": SendMessage,
 	"goteaLink":    Link,
 	"goteaForm":    SubmitForm,
+	"goteaValue":   SendMessageWithInputValue,
 }
 
 func SendMessage(msg string, args interface{}) template.JS {
@@ -22,6 +23,11 @@ func SendMessage(msg string, args interface{}) template.JS {
 
 func SubmitForm(msg string, formID string) template.JS {
 	s := fmt.Sprintf("gotea.submitForm('%s', '%s')", msg, formID)
+	return template.JS(s)
+}
+
+func SendMessageWithInputValue(msg string, inputID string) template.JS {
+	s := fmt.Sprintf("gotea.sendMessageWithValue('%s', '%s')", msg, inputID)
 	return template.JS(s)
 }
 
