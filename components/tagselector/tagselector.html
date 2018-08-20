@@ -1,21 +1,36 @@
-<h3>Tag Selector</h3>
+{{ $msgSelectTag := .UniqueMsg `TAG.SELECT` }}
+<!--  -->
+{{ $msgUpdateSearchInput := .UniqueMsg `SEARCHINPUT.UPDATE` }}
+<!--  -->
+{{ $msgRemoveTag := .UniqueMsg `TAG.REMOVE` }}
+<!--  -->
+{{ $searchInputID := .UniqueID `search-input` }}
 
-<div>
-    <h4>Available Tags:</h4>
-    <ul>
-        {{ range .AvailableTags }}
-        <li onclick='{{ goteaMessage `TAGSELECTOR_SELECTTAG` . }}'>
-            {{ . }}
-        </li>
-        {{ end }}
-    </ul>
-</div>
 
-<div>
-    <h4>Selected Tags:</h4>
-    <ul>
-        {{ range .SelectedTags }}
-        <li>{{ . }}</li>
+<div class="tagselector tagselector-container">
+    <div class="tagselector-suggestedtags">
+        {{ $searchInputID := .UniqueID `search-input` }}
+        <input id="{{ $searchInputID }}" class="input" type="text" placeholder="Start typing to see tags" value='{{ .SearchInput }}' onkeyup='{{ goteaValue $msgUpdateSearchInput $searchInputID }}'>
+        <ul class="tagselector-tagslist tagselector-suggestedtagslist">
+            {{ range .SuggestedTags }}
+            <li class="tagselector-tag tagselector-suggestedtag" onclick='{{ goteaMessage $msgSelectTag . }}'>
+                {{ . }}
+            </li>
+            {{ end }}
+        </ul>
+        {{ $noSuggestions := len .SuggestedTags }}
+        <!-- spacer -->
+        {{ if .ShowNoMatchMessage }}
+        <p>{{ .NoMatchMessage }}</p>
         {{ end }}
-    </ul>
+    </div>
+
+    <div class="tagselector-selectedtags">
+        <h4 class="tagselector-selectedtagstitle">Selected Tags:</h4>
+        <ul class="tagselector-tagslist tagselector-selectedtagslist">
+            {{ range .SelectedTags }}
+            <li onclick='{{ goteaMessage $msgRemoveTag . }}' class="tagselector-tag tagselector-selectedtag">{{ . }}</li>
+            {{ end }}
+        </ul>
+    </div>
 </div>

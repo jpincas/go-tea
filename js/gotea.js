@@ -51,9 +51,22 @@ function submitForm(message, formID) {
   socket.send(JSON.stringify(msg));
 }
 
+function sendMessageWithValue(message, inputID) {
+  let value = document.getElementById(inputID).value;
+
+  let msg = {
+    message,
+    args: value
+  };
+
+  console.log("Sending websocket message: ", msg);
+  socket.send(JSON.stringify(msg));
+}
+
 window.gotea = {
   sendMessage: debounce(sendMessage, 200),
-  submitForm: debounce(submitForm, 200)
+  submitForm: debounce(submitForm, 200),
+  sendMessageWithValue: debounce(sendMessageWithValue, 200)
 };
 
 function debounce(func, wait, immediate) {
@@ -108,11 +121,9 @@ const serializeForm = formID => {
     switch (el.type) {
       // simple string to field name assignment
       case TEXT_INPUT:
-        alert("czapa");
         acc[el.name] = el.value;
         break;
       case CHECKBOX:
-        alert("tiu");
         // see if checkbox is checked and assign bool to it's name.
         acc[el.name] = el.checked;
         break;
