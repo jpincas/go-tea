@@ -10,9 +10,7 @@ import (
 // Name Selector (instantiation of Tag Selector)
 
 var nameSelector = tagselector.Model{
-	Component: gotea.Component{
-		UniqueID: "NAMESELECTOR",
-	},
+	ComponentID:   "NAMESELECTOR",
 	AvailableTags: []string{"Jon", "Allan", "Piotr"},
 }
 
@@ -35,9 +33,7 @@ func nameSelectorSelectTag(args json.RawMessage, s gotea.State) (gotea.State, *g
 // Team Selector (instantiation of Tag Selector)
 
 var teamSelector = tagselector.Model{
-	Component: gotea.Component{
-		UniqueID: "TEAMSELECTOR",
-	},
+	ComponentID:   "TEAMSELECTOR",
 	AvailableTags: []string{"Arsenal", "Man City", "Real Madrid"},
 }
 

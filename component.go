@@ -1,14 +1,12 @@
 package gotea
 
-type Component struct {
-	UniqueID string
+type ComponentID string
+
+func (c ComponentID) UniqueMsg(msg string) string {
+	return string(c) + "_" + msg
 }
 
-func (c Component) UniqueMsg(msg string) string {
-	return c.UniqueID + "_" + msg
-}
-
-func (c Component) MessageMap(messagesWithHandlers map[string]MessageHandler) MessageMap {
+func (c ComponentID) UniqueMsgMap(messagesWithHandlers MessageMap) MessageMap {
 	msgMap := MessageMap{}
 
 	for message, handler := range messagesWithHandlers {

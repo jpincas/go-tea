@@ -9,7 +9,7 @@ const (
 )
 
 type Model struct {
-	gotea.Component
+	gotea.ComponentID
 	SearchInput   string
 	AvailableTags []string
 	SuggestedTags []string
