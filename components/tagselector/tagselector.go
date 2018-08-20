@@ -1,25 +1,19 @@
 package tagselector
 
-import (
-	"encoding/json"
+import gotea "github.com/jpincas/go-tea"
 
-	"github.com/jpincas/go-tea"
+// Message Constants
+const (
+	MsgSelectTag         = "TAG.SELECT"
+	MsgSearchInputUpdate = "SEARCHINPUT.UPDATE"
 )
 
 type Model struct {
+	gotea.Component
 	SearchInput   string
 	AvailableTags []string
 	SuggestedTags []string
 	SelectedTags  []string
-}
-
-var Messages = gotea.MessageMap{
-	"TAGSELECTOR_SELECTTAG":          Handler,
-	"TAGSELECTOR_SEARCHINPUT_UPDATE": Handler,
-}
-
-func Handler(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
-	return s, nil, nil
 }
 
 func (m *Model) SelectTag(newTag string) {

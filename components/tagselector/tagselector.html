@@ -1,10 +1,12 @@
+{{ $selectTag := .UniqueMsg `TAG.SELECT` }}
+
 <h3>Tag Selector</h3>
 
 <div>
     <h4>Available Tags:</h4>
     <ul>
         {{ range .AvailableTags }}
-        <li onclick='{{ goteaMessage `TAGSELECTOR_SELECTTAG` . }}'>
+        <li onclick='{{ goteaMessage $selectTag . }}'>
             {{ . }}
         </li>
         {{ end }}

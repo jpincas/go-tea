@@ -31,9 +31,10 @@ func parseTemplates() {
 
 type Model struct {
 	*gotea.Router
-	MemoryGame  MemoryGame
-	TagSelector tagselector.Model
-	Form        Form
+	MemoryGame   MemoryGame
+	NameSelector tagselector.Model
+	TeamSelector tagselector.Model
+	Form         Form
 }
 
 func main() {
@@ -50,9 +51,8 @@ func main() {
 					LastAttemptedCard: 5, //hack
 					Score:             0,
 				},
-				TagSelector: tagselector.Model{
-					AvailableTags: []string{"tag1", "tag2", "tag3"},
-				},
+				NameSelector: nameSelector,
+				TeamSelector: teamSelector,
 				Form: Form{
 					Options: []string{"option 1", "option 2", "option 3"},
 				},
@@ -64,7 +64,8 @@ func main() {
 	gotea.App.Messages.
 		MergeMap(memoryGameMessages).
 		MergeMap(formMessages).
-		MergeMap(tagselector.Messages)
+		MergeMap(nameSelectorMsgMap).
+		MergeMap(teamSelectorMsgMap)
 
 	// Parse templates
 	parseTemplates()

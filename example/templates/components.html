@@ -1,3 +1,14 @@
 <h2>Components Demo</h2>
 
-{{ template "tagselector.html" .TagSelector }}
+<p>Two instantiations of the 'tag selector' component, running side-by-side</p>
+
+<div>
+    <div>
+        <h3>Name Selector</h3>
+        {{ template "tagselector.html" .NameSelector }}
+    </div>
+    <div>
+        <h3>Team Selector</h3>
+        {{ template "tagselector.html" .TeamSelector }}
+    </div>
+</div>

@@ -7,17 +7,48 @@ import (
 	"github.com/jpincas/go-tea/components/tagselector"
 )
 
-func init() {
-	// Have to specify tag selector messages
-	tagselector.Messages["TAGSELECTOR_SELECTTAG"] = func(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
-		state := s.(Model)
+var nameSelector = tagselector.Model{
+	Component: gotea.Component{
+		UniqueID: "NAMESELECTOR",
+	},
+	AvailableTags: []string{"Jon", "Allan", "Piotr"},
+}
 
-		var tag string
-		if err := json.Unmarshal(args, &tag); err != nil {
-			return state, nil, err
-		}
+var teamSelector = tagselector.Model{
+	Component: gotea.Component{
+		UniqueID: "TEAMSELECTOR",
+	},
+	AvailableTags: []string{"Arsenal", "Man City", "Real Madrid"},
+}
 
-		state.TagSelector.SelectTag(tag)
-		return state, nil, nil
+var nameSelectorMsgMap = gotea.MessageMap{
+	nameSelector.UniqueMsg(tagselector.MsgSelectTag): nameSelectorSelectTag,
+}
+
+var teamSelectorMsgMap = gotea.MessageMap{
+	teamSelector.UniqueMsg(tagselector.MsgSelectTag): teamSelectorSelectTag,
+}
+
+func nameSelectorSelectTag(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
+	state := s.(Model)
+
+	var tag string
+	if err := json.Unmarshal(args, &tag); err != nil {
+		return state, nil, err
 	}
+
+	state.NameSelector.SelectTag(tag)
+	return state, nil, nil
+}
+
+func teamSelectorSelectTag(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
+	state := s.(Model)
+
+	var tag string
+	if err := json.Unmarshal(args, &tag); err != nil {
+		return state, nil, err
+	}
+
+	state.TeamSelector.SelectTag(tag)
+	return state, nil, nil
 }
