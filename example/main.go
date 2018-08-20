@@ -33,6 +33,7 @@ type Model struct {
 	*gotea.Router
 	MemoryGame  MemoryGame
 	TagSelector tagselector.Model
+	Form        Form
 }
 
 func main() {
@@ -52,12 +53,17 @@ func main() {
 				TagSelector: tagselector.Model{
 					AvailableTags: []string{"tag1", "tag2", "tag3"},
 				},
+				Form: Form{
+					Options: []string{"option 1", "option 2", "option 3"},
+				},
 			},
 		}
 	}
 
+	// Register all the message maps
 	gotea.App.Messages.
 		MergeMap(memoryGameMessages).
+		MergeMap(formMessages).
 		MergeMap(tagselector.Messages)
 
 	// Parse templates

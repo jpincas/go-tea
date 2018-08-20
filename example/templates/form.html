@@ -1,0 +1,20 @@
+<h1>Form Example</h1>
+
+{{ $form := .Form }}
+
+<form id="my-form">
+
+    <h2>Text Input</h2>
+    <input class="input" type="text" placeholder="Some simple text inout" value="{{ $form.TextInput }}" name="textInput" onkeyup='{{ goteaForm `FORM_UPDATE` `my-form` }}'>
+
+    <h2>Simple Select</h2>
+    <select name='selectInput' onchange='{{ goteaForm `FORM_UPDATE` `my-form` }}'>
+        {{ range $form.Options }}
+        <option value={{ . }} {{ if eq $form.SelectInput . }} selected {{ end }}>
+            {{ . }}
+        </option>
+        {{ end }}
+    </select>
+
+
+</form>
