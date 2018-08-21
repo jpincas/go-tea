@@ -65,21 +65,23 @@ function sendMessageWithValue(message, inputID) {
 
 window.gotea = {
   sendMessage: debounce(sendMessage, 200),
-  submitForm: debounce(submitForm, 200),
+  submitForm: debounce(submitForm, 200, true),
   sendMessageWithValue: debounce(sendMessageWithValue, 200)
 };
 
 function debounce(func, wait, immediate) {
   let timeout;
   return function() {
-    const later = () => {
+    let context = this,
+      args = arguments;
+    let later = function() {
       timeout = null;
-      if (!immediate) func.apply(this, arguments);
+      if (!immediate) func.apply(context, args);
     };
     const callNow = immediate && !timeout;
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
-    if (callNow) func.apply(this, arguments);
+    if (callNow) func.apply(context, args);
   };
 }
 
