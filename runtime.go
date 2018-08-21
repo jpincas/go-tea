@@ -262,14 +262,14 @@ var App = Application{
 // And finally you are ready to start gotea.
 
 // Start creates the router, and serves it!
-func (app Application) Start(distDirectory string, port int) {
+func (app *Application) Start(distDirectory string, port int, customFuncMap template.FuncMap, templateLocations ...string) {
 	if app.NewSession == nil {
 		log.Fatalln("ERROR: No session state seeder function specificied.  Exiting...")
 	}
 
-	if app.Templates == nil {
-		log.Fatalln("ERROR: No app templates have been specified.  Exiting...")
-	}
+	// Parse the templates at the defined locations
+	// and incorporating the custom func map
+	app.parseTemplates(customFuncMap, templateLocations...)
 
 	router := chi.NewRouter()
 	// Attach the websocket handler at /server

@@ -5,6 +5,24 @@ import (
 	"html/template"
 )
 
+func (app *Application) parseTemplates(customFuncMap template.FuncMap, templateLocations ...string) {
+	// Combine the specified custom func map with the standard gotea one
+	squashedFuncMap := SquashFuncMaps(
+		customFuncMap,
+		TemplateHelpers,
+	)
+
+	// Parse the templates at the different locations
+	// The first one is treated slightly differently
+	for i, templateLocation := range templateLocations {
+		if i == 0 {
+			app.Templates = template.Must(template.New("main").Funcs(squashedFuncMap).ParseGlob(templateLocation))
+		} else {
+			template.Must(app.Templates.ParseGlob(templateLocation))
+		}
+	}
+}
+
 // TemplateHelpers are functions that can be used in Go templates
 // to conveniently generate HTML/JS for emitting go-tea events.
 // Either parse this map directly into your templates,

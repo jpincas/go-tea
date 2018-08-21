@@ -9,26 +9,6 @@ import (
 	"github.com/jpincas/go-tea/components/tagselector"
 )
 
-var Templates *template.Template
-
-func parseTemplates() {
-	auxFuncs := template.FuncMap{
-		"prettyPrint": func(s interface{}) template.HTML {
-			res, _ := json.MarshalIndent(s, "<br />", "<span style='margin-left:15px'></span>")
-			return template.HTML(string(res))
-		},
-	}
-
-	funcMap := gotea.SquashFuncMaps(
-		auxFuncs,
-		gotea.TemplateHelpers,
-	)
-
-	Templates = template.Must(template.New("main").Funcs(funcMap).ParseGlob("templates/*.html"))
-
-	template.Must(Templates.ParseGlob("../components/*/*.html"))
-}
-
 type Model struct {
 	*gotea.Router
 	MemoryGame   MemoryGame
@@ -67,11 +47,16 @@ func main() {
 		MergeMap(nameSelector.UniqueMsgMap(nameSelectorMessages)).
 		MergeMap(teamSelector.UniqueMsgMap(teamSelectorMessages))
 
-	// Parse templates
-	parseTemplates()
-	gotea.App.Templates = Templates
-
 	// Start the app
 	fmt.Println("starting server")
-	gotea.App.Start("dist", 8080)
+
+	// Define a custom template func map
+	templateFuncs := template.FuncMap{
+		"prettyPrint": func(s interface{}) template.HTML {
+			res, _ := json.MarshalIndent(s, "<br />", "<span style='margin-left:15px'></span>")
+			return template.HTML(string(res))
+		},
+	}
+
+	gotea.App.Start("dist", 8080, templateFuncs, "templates/*.html", "../components/*/*.html")
 }
