@@ -1,6 +1,7 @@
 // var serialize = require("form-serialize");
 import morphdom from "morphdom";
 import serialize from "form-serialize";
+import debounce from "./debounce";
 
 // Websockets
 
@@ -64,26 +65,10 @@ function sendMessageWithValue(message, inputID) {
 }
 
 window.gotea = {
-  sendMessage: debounce(sendMessage, 200),
-  submitForm: debounce(submitForm, 200, true),
-  sendMessageWithValue: debounce(sendMessageWithValue, 200)
+  sendMessage: debounce(sendMessage, 200, { leading: true }),
+  submitForm: debounce(submitForm, 200, { leading: true }),
+  sendMessageWithValue: debounce(sendMessageWithValue, 200, { leading: true })
 };
-
-function debounce(func, wait, immediate) {
-  let timeout;
-  return function() {
-    let context = this,
-      args = arguments;
-    let later = function() {
-      timeout = null;
-      if (!immediate) func.apply(context, args);
-    };
-    const callNow = immediate && !timeout;
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-    if (callNow) func.apply(context, args);
-  };
-}
 
 const serializeForm = formID => {
   const formElements = [...document.getElementById(formID).elements];
