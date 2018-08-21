@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -9,18 +8,6 @@ import (
 	gotea "github.com/jpincas/go-tea"
 	"github.com/jpincas/go-tea/components/tagselector"
 )
-
-func renderView(state gotea.State) []byte {
-	template := state.RouteTemplate("html")
-
-	buf := bytes.Buffer{}
-	err := Templates.ExecuteTemplate(&buf, template, state)
-	if err != nil {
-		return []byte(fmt.Sprintf("Executing template %s. Error: %v", template, err))
-	}
-
-	return buf.Bytes()
-}
 
 var Templates *template.Template
 
@@ -82,9 +69,7 @@ func main() {
 
 	// Parse templates
 	parseTemplates()
-
-	// Register the main render function
-	gotea.App.RenderView = renderView
+	gotea.App.Templates = Templates
 
 	// Start the app
 	fmt.Println("starting server")

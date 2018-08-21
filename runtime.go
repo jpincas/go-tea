@@ -86,7 +86,7 @@ func (session *Session) render() {
 		return
 	}
 
-	session.Conn.WriteMessage(1, App.RenderView(session.State))
+	session.Conn.WriteMessage(1, App.render(session.State, App.Templates))
 }
 
 // But on its own, the above would be quite boring,
@@ -224,9 +224,25 @@ type Application struct {
 	// to initialise a new sesson with a default initial state.
 	NewSession func() Session
 
-	// RenderView is the main render function
-	// that turns state into HTML to be sent to the client
-	RenderView func(State) []byte
+	// Templates for rending, provided by the appication
+	Templates *template.Template
+}
+
+// render is the main render function for the whole app
+// It specifies how to render state.
+// It will look for a template whose name matches the route, e.g.
+// /myroute -> myroute.html
+// /myroute/subroute -> myroute_subroute.html
+func (app Application) render(state State, templates *template.Template) []byte {
+	templateName := state.RouteTemplate("html")
+
+	buf := bytes.Buffer{}
+	err := templates.ExecuteTemplate(&buf, templateName, state)
+	if err != nil {
+		return []byte(fmt.Sprintf("Executing template %s. Error: %v", templateName, err))
+	}
+
+	return buf.Bytes()
 }
 
 // App kicks everything off, holding the global application state
@@ -251,8 +267,8 @@ func (app Application) Start(distDirectory string, port int) {
 		log.Fatalln("ERROR: No session state seeder function specificied.  Exiting...")
 	}
 
-	if app.RenderView == nil {
-		log.Fatalln("Error: No main view render function set. Exiting...")
+	if app.Templates == nil {
+		log.Fatalln("ERROR: No app templates have been specified.  Exiting...")
 	}
 
 	router := chi.NewRouter()
