@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"html/template"
 
@@ -24,7 +25,19 @@ func renderView(state gotea.State) []byte {
 var Templates *template.Template
 
 func parseTemplates() {
-	Templates = template.Must(template.New("main").Funcs(gotea.TemplateHelpers).ParseGlob("templates/*.html"))
+	auxFuncs := template.FuncMap{
+		"prettyPrint": func(s interface{}) template.HTML {
+			res, _ := json.MarshalIndent(s, "<br />", "<span style='margin-left:15px'></span>")
+			return template.HTML(string(res))
+		},
+	}
+
+	funcMap := gotea.SquashFuncMaps(
+		auxFuncs,
+		gotea.TemplateHelpers,
+	)
+
+	Templates = template.Must(template.New("main").Funcs(funcMap).ParseGlob("templates/*.html"))
 
 	template.Must(Templates.ParseGlob("../components/*/*.html"))
 }

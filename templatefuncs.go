@@ -14,7 +14,10 @@ var TemplateHelpers = template.FuncMap{
 	"goteaLink":    Link,
 	"goteaForm":    SubmitForm,
 	"goteaValue":   SendMessageWithInputValue,
+	"memberString": MemberString,
 }
+
+// Gotea message construction helpers
 
 func SendMessage(msg string, args interface{}) template.JS {
 	s := fmt.Sprintf("gotea.sendMessage('%s', %s)", msg, argsToJSON(args))
@@ -55,4 +58,30 @@ func argsToJSON(args interface{}) string {
 		// Everything else as a string
 		return fmt.Sprintf(`'"%v"'`, args)
 	}
+}
+
+// SquashFuncMaps is a helper to combine multiple template FuncMaps
+func SquashFuncMaps(funcMaps ...template.FuncMap) template.FuncMap {
+	masterMap := template.FuncMap{}
+
+	for _, thisMap := range funcMaps {
+		for k, v := range thisMap {
+			masterMap[k] = v
+		}
+	}
+
+	return masterMap
+}
+
+// General Helpers
+
+// MemberString returns whether a target string is a member of a slice of strings
+func MemberString(target string, list []string) bool {
+	for _, member := range list {
+		if member == target {
+			return true
+		}
+	}
+
+	return false
 }

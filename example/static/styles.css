@@ -5,6 +5,15 @@ body {
 
 /* Main */
 
+.row {
+    display: flex;
+    flex-direction: row;
+}
+
+.row .equalchild {
+    flex: 1;
+}
+
 .navbar ul {
     list-style: none;
     padding: 0;
@@ -14,7 +23,7 @@ body {
     color: white;
 }
 
-.navbar ul a{
+.navbar ul a {
     text-decoration: none;
     text-transform: uppercase;
     color: white;
@@ -53,7 +62,6 @@ body {
     border: none;
     border-radius: 5px;
     background-color: silver;
-
 }
 
 button.flipcard {

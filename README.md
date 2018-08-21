@@ -26,5 +26,13 @@ Go-tea requires a small amount of JS to work - you'll find it in the `js` direct
 
 ## Example
 
-The `/example` repo demonstrates many of go-tea's capabilities, including routing, components and forms.  First, build the static assets (again, `npm run build`), then run the example with `go run *.go`.  Be warned: if you are working on gotea core AND the example, and you make changes to the go-tea core JS, you need to first rebuild that, THEN rebuild the example JS, since it includes the core JS. Clear?
+The `/example` repo demonstrates many of go-tea's capabilities, including routing, components and forms.  
+
+- For a first time build, build the core JS as described above.
+- Now build the static assets for the example - again, `npm run build` in the `example` directory - 
+- Run the example with `go run *.go`.  
+
+Warning: Parcel seems to be a bit messed up when building the example, it can nuke the `package.json` and/or delete Parcel itself from `node_modules`.  Be careful not to check in a nuked `package.json`
+
+Be warned: if you are working on gotea core AND the example, and you make changes to the go-tea core JS, you need to first rebuild that, THEN rebuild the example JS, since it includes the core JS. Clear?
 

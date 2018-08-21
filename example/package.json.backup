@@ -1,0 +1,15 @@
+{
+  "name": "memorygame",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "parcel static/index.html --public-url /dist",
+    "build": "parcel build static/index.html --public-url /dist"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "parcel-bundler": "^1.9.7"
+  }
+}

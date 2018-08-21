@@ -1,13 +1,11 @@
-// var serialize = require("form-serialize");
 import morphdom from "morphdom";
-import serialize from "form-serialize";
 
 // Websockets
 
 const socket = new WebSocket(
-  window.location.protocol === "https:"
-    ? "wss://"
-    : "ws://" + window.location.host + "/server"
+  window.location.protocol === "https:" ?
+    "wss://" :
+    "ws://" + window.location.host + "/server"
 );
 
 socket.onopen = () => {
@@ -64,17 +62,17 @@ function sendMessageWithValue(message, inputID) {
 }
 
 window.gotea = {
-  sendMessage: debounce(sendMessage, 200),
+  sendMessage: debounce(sendMessage, 200, true),
   submitForm: debounce(submitForm, 200, true),
-  sendMessageWithValue: debounce(sendMessageWithValue, 200)
+  sendMessageWithValue: debounce(sendMessageWithValue, 200, true)
 };
 
 function debounce(func, wait, immediate) {
   let timeout;
-  return function() {
+  return function () {
     let context = this,
       args = arguments;
-    let later = function() {
+    let later = function () {
       timeout = null;
       if (!immediate) func.apply(context, args);
     };
@@ -96,10 +94,9 @@ const serializeForm = formID => {
   // map over array of options (elements children). If option is selected, return it's value
   // otherwise return empty string and then filter out empty strings from the array so we end up
   // with array of selected options.
-  const buildSelectArray = select =>
-    [...select.children]
-      .map(option => (option.selected ? option.value : ""))
-      .filter(value => value.length > 0);
+  const buildSelectArray = select => [...select.children]
+    .map(option => (option.selected ? option.value : ""))
+    .filter(value => value.length > 0);
 
   // if select has multiple attribute, build array of selected options,
   // otherwise, for dropdown for example, return select's value
@@ -139,55 +136,6 @@ const serializeForm = formID => {
     return acc;
   }, {});
 };
-
-// function sendMessage(element) {
-//   let _message = element.target.dataset.msg;
-//   let message = {};
-//   if (_message) {
-//     message = JSON.parse(_message);
-//   }
-//   console.log("Sending websocket message: ", message);
-//   socket.send(JSON.stringify(message));
-// }
-
-// document.addEventListener(
-//   "click",
-//   function (e) {
-//     if (/gotea-click/.test(e.target.className)) {
-//       sendMessage(e);
-//     }
-//   },
-//   false
-// );
-
-// function sendFormSubmitMessage(element) {
-//   let _message = element.target.dataset.msg;
-//   let message = {};
-
-//   let _form = element.target.parentNode;
-//   let form = {};
-//   if (_form) {
-//     form = serialize(_form, { hash: true });
-//   }
-
-//   if (_message) {
-//     message = JSON.parse(_message);
-//     message.arguments = form;
-//   }
-
-//   console.log("Sending websocket message: ", message);
-//   socket.send(JSON.stringify(message));
-// }
-
-// document.addEventListener(
-//   "click",
-//   function (e) {
-//     if (/gotea-form-submit/.test(e.target.className)) {
-//       sendFormSubmitMessage(e);
-//     }
-//   },
-//   false
-// );
 
 function changeRoute(route) {
   history.pushState({}, "", route);
