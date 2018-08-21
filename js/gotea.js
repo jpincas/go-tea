@@ -4,18 +4,20 @@ import serialize from "form-serialize";
 
 // Websockets
 
-var socket = new WebSocket(
-  (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/server"
+const socket = new WebSocket(
+  window.location.protocol === "https:"
+    ? "wss://"
+    : "ws://" + window.location.host + "/server"
 );
 
-socket.onopen = function () {
-  let path = window.location.pathname;
+socket.onopen = () => {
+  const path = window.location.pathname;
   if (path != "/") {
-    changeRoute(path)
+    changeRoute(path);
   }
-}
+};
 
-socket.onmessage = function (event) {
+socket.onmessage = event => {
   swapDOM(event.data, "view");
 };
 
@@ -23,33 +25,27 @@ socket.onmessage = function (event) {
 // with the option 'childrenOnly' Morphom swaps children of the containers,
 // therefore we place the incoming HTML in a div
 const swapDOM = (incomingHTML, containerID) => {
-  var el1 = document.createElement('div');
+  const el1 = document.createElement("div");
   el1.innerHTML = incomingHTML;
   morphdom(document.getElementById(containerID), el1, {
-    "childrenOnly": true
+    childrenOnly: true
   });
-}
-
+};
 
 const sendMessage = (msgString, args) => {
-  let msg = {
-    "message": msgString,
-    "args": JSON.parse(args)
-  }
+  const msg = {
+    message: msgString,
+    args: JSON.parse(args)
+  };
   console.log("Sending websocket message: ", msg);
   socket.send(JSON.stringify(msg));
-}
+};
 
 function submitForm(message, formID) {
-  let form = document.getElementById(formID);
-  let obj = serialize(form, {
-    hash: true
-  });
-
-  let msg = {
-    "message": message,
-    "args": obj
-  }
+  const msg = {
+    message,
+    args: serializeForm(formID)
+  };
 
   console.log("Sending websocket message: ", msg);
   socket.send(JSON.stringify(msg));
@@ -59,44 +55,90 @@ function sendMessageWithValue(message, inputID) {
   let value = document.getElementById(inputID).value;
 
   let msg = {
-    "message": message,
-    "args": value
-  }
+    message,
+    args: value
+  };
 
   console.log("Sending websocket message: ", msg);
   socket.send(JSON.stringify(msg));
 }
 
-const sendMessageDebounce = debounce(sendMessage, 200);
-const submitFormDebounce = debounce(submitForm, 200);
-const sendMessageWithValueDebounce = debounce(sendMessageWithValue, 200);
-
-
-
-window.gotea = {};
-window.gotea.sendMessage = sendMessageDebounce;
-window.gotea.submitForm = submitFormDebounce;
-window.gotea.sendMessageWithValue = sendMessageWithValueDebounce;
-
-
-
+window.gotea = {
+  sendMessage: debounce(sendMessage, 200),
+  submitForm: debounce(submitForm, 200, true),
+  sendMessageWithValue: debounce(sendMessageWithValue, 200)
+};
 
 function debounce(func, wait, immediate) {
-  var timeout;
-  return function () {
-    var context = this,
+  let timeout;
+  return function() {
+    let context = this,
       args = arguments;
-    var later = function () {
+    let later = function() {
       timeout = null;
       if (!immediate) func.apply(context, args);
     };
-    var callNow = immediate && !timeout;
+    const callNow = immediate && !timeout;
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
     if (callNow) func.apply(context, args);
   };
-};
+}
 
+const serializeForm = formID => {
+  const formElements = [...document.getElementById(formID).elements];
+  const TEXT_INPUT = "text";
+  const CHECKBOX = "checkbox";
+  const RADIO = "radio";
+  const SELECT = "SELECT"; // for some reason tagName returns uppercase name
+  const TEXTAREA = "TEXTAREA";
+
+  // map over array of options (elements children). If option is selected, return it's value
+  // otherwise return empty string and then filter out empty strings from the array so we end up
+  // with array of selected options.
+  const buildSelectArray = select =>
+    [...select.children]
+      .map(option => (option.selected ? option.value : ""))
+      .filter(value => value.length > 0);
+
+  // if select has multiple attribute, build array of selected options,
+  // otherwise, for dropdown for example, return select's value
+  const handleSelect = select =>
+    select.multiple ? buildSelectArray(select) : select.value;
+
+  // reduce over form elements and check against their type (for inputs) and tagName for other tags
+  // (textarea/select etc). Return data shaped specifically for structs on server-side, so they are easy
+  // to decode
+  return formElements.reduce((acc, el) => {
+    switch (el.tagName) {
+      case SELECT:
+        // select may have multiple values, check if it is a case and return proper value (array or string)
+        acc[el.name] = handleSelect(el);
+        break;
+      case TEXTAREA:
+        // simple string to field name assignment
+        acc[el.name] = el.value;
+        break;
+    }
+    switch (el.type) {
+      // simple string to field name assignment
+      case TEXT_INPUT:
+        acc[el.name] = el.value;
+        break;
+      case CHECKBOX:
+        // see if checkbox is checked and assign bool to it's name.
+        acc[el.name] = el.checked;
+        break;
+      case RADIO:
+        // if radio is checked, assign it's value (string) to it's name
+        if (el.checked) {
+          acc[el.name] = el.value;
+        }
+        break;
+    }
+    return acc;
+  }, {});
+};
 
 // function sendMessage(element) {
 //   let _message = element.target.dataset.msg;
@@ -150,10 +192,10 @@ function debounce(func, wait, immediate) {
 function changeRoute(route) {
   history.pushState({}, "", route);
 
-  let msg = {
-    "message": "CHANGE_ROUTE",
-    "args": route
-  }
+  const msg = {
+    message: "CHANGE_ROUTE",
+    args: route
+  };
 
   console.log("Sending websocket message: ", msg);
   socket.send(JSON.stringify(msg));
@@ -161,7 +203,7 @@ function changeRoute(route) {
 
 document.addEventListener(
   "click",
-  function (e) {
+  e => {
     if (/gotea-link/.test(e.target.className)) {
       e.preventDefault();
       changeRoute(e.target.getAttribute("href"));
