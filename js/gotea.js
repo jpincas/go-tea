@@ -1,4 +1,3 @@
-// var serialize = require("form-serialize");
 import morphdom from "morphdom";
 import serialize from "form-serialize";
 import debounce from "./debounce";
@@ -124,55 +123,6 @@ const serializeForm = formID => {
     return acc;
   }, {});
 };
-
-// function sendMessage(element) {
-//   let _message = element.target.dataset.msg;
-//   let message = {};
-//   if (_message) {
-//     message = JSON.parse(_message);
-//   }
-//   console.log("Sending websocket message: ", message);
-//   socket.send(JSON.stringify(message));
-// }
-
-// document.addEventListener(
-//   "click",
-//   function (e) {
-//     if (/gotea-click/.test(e.target.className)) {
-//       sendMessage(e);
-//     }
-//   },
-//   false
-// );
-
-// function sendFormSubmitMessage(element) {
-//   let _message = element.target.dataset.msg;
-//   let message = {};
-
-//   let _form = element.target.parentNode;
-//   let form = {};
-//   if (_form) {
-//     form = serialize(_form, { hash: true });
-//   }
-
-//   if (_message) {
-//     message = JSON.parse(_message);
-//     message.arguments = form;
-//   }
-
-//   console.log("Sending websocket message: ", message);
-//   socket.send(JSON.stringify(message));
-// }
-
-// document.addEventListener(
-//   "click",
-//   function (e) {
-//     if (/gotea-form-submit/.test(e.target.className)) {
-//       sendFormSubmitMessage(e);
-//     }
-//   },
-//   false
-// );
 
 function changeRoute(route) {
   history.pushState({}, "", route);
