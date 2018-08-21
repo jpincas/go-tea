@@ -55,11 +55,3 @@ func changeRoute(args json.RawMessage, s State) (State, *Message, error) {
 	s.SetRoute(newRoute)
 	return s, nil, nil
 }
-
-func MatchRoute(currentRoute, toMatch string) bool {
-	if currentRoute == toMatch {
-		return true
-	}
-
-	return false
-}

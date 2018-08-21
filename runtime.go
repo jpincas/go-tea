@@ -22,8 +22,7 @@ import (
 // by the runtime on each update.
 // It can essentially be anything  - you define it as a struct in your application code.
 // Conventionally, you'd call it 'Model', but you don't have to!
-// The only requirement is that the state you define should be able to set and get a 'route' - predictably used for routing.
-// Typically, you do that by including a 'route' field on your state and then define 'SetState()' and 'GetState()' on your model.  This will cause your app to respond correctly to in-built routing messages.
+// You get a router by embedding the go-tea Router in your model
 type State Routable
 
 // Session is just a holder for a websocket connection (or more accurately, a pointer to one),
