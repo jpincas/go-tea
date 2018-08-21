@@ -2,13 +2,14 @@ package gotea
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"strings"
 )
 
 type Routable interface {
 	SetRoute(string)
-	BaseRoute() string
+	GetRoute() string
 	RouteTemplate(string) string
 	RouteParam(string) string
 }
@@ -21,20 +22,25 @@ func (r *Router) SetRoute(newRoute string) {
 	r.Route = newRoute
 }
 
-func (r Router) BaseRoute() string {
-	trimmed := strings.Trim(r.Route, "/")
-	base := strings.Split(trimmed, "/")[0]
+func (r Router) GetRoute() string {
+	// Trim any / at the start/end
+	s := strings.Trim(r.Route, "/")
 
-	paramsIndex := strings.Index(base, "?")
-	if paramsIndex == -1 {
-		return base
+	// Remove any params
+	paramsStart := strings.Index(s, "?")
+	if paramsStart != -1 {
+		s = s[0:paramsStart]
 	}
 
-	return base[0:paramsIndex]
+	return s
 }
 
+// RouteTemplate is a helper for associating a template file to a route
+// It replaces all intermediate slashes with an underscore, so
+// /baseroute/subroute -> baseroute_subroute.html
 func (r Router) RouteTemplate(extension string) string {
-	return r.BaseRoute() + "." + extension
+	underscoredRoute := strings.Replace(r.GetRoute(), "/", "_", -1)
+	return fmt.Sprintf("%s.%s", underscoredRoute, extension)
 }
 
 func (r Router) RouteParam(param string) string {
