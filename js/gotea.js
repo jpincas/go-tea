@@ -1,11 +1,13 @@
 import morphdom from "morphdom";
+import serialize from "form-serialize";
+import debounce from "./debounce";
 
 // Websockets
 
 const socket = new WebSocket(
-  window.location.protocol === "https:" ?
-    "wss://" :
-    "ws://" + window.location.host + "/server"
+  window.location.protocol === "https:"
+    ? "wss://"
+    : "ws://" + window.location.host + "/server"
 );
 
 socket.onopen = () => {
@@ -62,26 +64,10 @@ function sendMessageWithValue(message, inputID) {
 }
 
 window.gotea = {
-  sendMessage: debounce(sendMessage, 200, true),
-  submitForm: debounce(submitForm, 200, true),
-  sendMessageWithValue: debounce(sendMessageWithValue, 200, true)
+  sendMessage: debounce(sendMessage, 200, { leading: true }),
+  submitForm: debounce(submitForm, 200, { leading: true }),
+  sendMessageWithValue: debounce(sendMessageWithValue, 200, { leading: true })
 };
-
-function debounce(func, wait, immediate) {
-  let timeout;
-  return function () {
-    let context = this,
-      args = arguments;
-    let later = function () {
-      timeout = null;
-      if (!immediate) func.apply(context, args);
-    };
-    const callNow = immediate && !timeout;
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-    if (callNow) func.apply(context, args);
-  };
-}
 
 const serializeForm = formID => {
   const formElements = [...document.getElementById(formID).elements];
@@ -94,9 +80,10 @@ const serializeForm = formID => {
   // map over array of options (elements children). If option is selected, return it's value
   // otherwise return empty string and then filter out empty strings from the array so we end up
   // with array of selected options.
-  const buildSelectArray = select => [...select.children]
-    .map(option => (option.selected ? option.value : ""))
-    .filter(value => value.length > 0);
+  const buildSelectArray = select =>
+    [...select.children]
+      .map(option => (option.selected ? option.value : ""))
+      .filter(value => value.length > 0);
 
   // if select has multiple attribute, build array of selected options,
   // otherwise, for dropdown for example, return select's value
