@@ -3,11 +3,8 @@ import serialize from "form-serialize";
 import debounce from "./debounce";
 
 // Websockets
-
 const socket = new WebSocket(
-  window.location.protocol === "https:"
-    ? "wss://"
-    : "ws://" + window.location.host + "/server"
+  (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/server"
 );
 
 socket.onopen = () => {
