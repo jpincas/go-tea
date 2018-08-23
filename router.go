@@ -12,10 +12,16 @@ type Routable interface {
 	GetRoute() string
 	RouteTemplate(string) string
 	RouteParam(string) string
+	FireUpdateHook(State) State
 }
 
 type Router struct {
-	Route string
+	Route      string
+	UpdateHook func(State) State
+}
+
+func (r Router) FireUpdateHook(s State) State {
+	return r.UpdateHook(s)
 }
 
 func (r *Router) SetRoute(newRoute string) {
@@ -58,6 +64,11 @@ func changeRoute(args json.RawMessage, s State) (State, *Message, error) {
 		return s, nil, err
 	}
 
+	// Set the new route on the router
 	s.SetRoute(newRoute)
-	return s, nil, nil
+
+	// Before returning, fire the route update hook.
+	// This is provided by the application and can implement any
+	// custom logic required
+	return s.FireUpdateHook(s), nil, nil
 }
