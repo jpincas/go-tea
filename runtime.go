@@ -161,7 +161,7 @@ func (message Message) Process(session *Session) error {
 // upgrader prepares the upgrader for websocket connections
 var upgrader = websocket.Upgrader{
 	// TODO: this needs to be configured
-	CheckOrigin: func (r *http.Request){ return true }
+	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
 // websocketHandler is the handler function called when a client connects.
