@@ -159,7 +159,10 @@ func (message Message) Process(session *Session) error {
 // loop until disconnection.
 
 // upgrader prepares the upgrader for websocket connections
-var upgrader = websocket.Upgrader{}
+var upgrader = websocket.Upgrader{
+	// TODO: this needs to be configured
+	CheckOrigin: func (r *http.Request){ return true }
+}
 
 // websocketHandler is the handler function called when a client connects.
 // It is basically the core of the runtime.  Here's what it does:
