@@ -21,7 +21,11 @@ type Router struct {
 }
 
 func (r Router) FireUpdateHook(s State) State {
-	return r.UpdateHook(s)
+	if r.UpdateHook != nil {
+		return r.UpdateHook(s)
+	}
+
+	return s
 }
 
 func (r *Router) SetRoute(newRoute string) {
