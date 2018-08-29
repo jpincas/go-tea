@@ -17,37 +17,35 @@ type Model struct {
 	Form         Form
 }
 
-func main() {
-	app := gotea.NewApp()
-
-	// Register the function that returns a new session
-	app.NewSession = func() gotea.Session {
-		return gotea.Session{
-			State: Model{
-				Router: &gotea.Router{
-					Route: "/home",
-				},
-				MemoryGame: MemoryGame{
-					Deck:              NewDeck(4),
-					TurnsTaken:        0,
-					LastAttemptedCard: 5, //hack
-					Score:             0,
-				},
-				NameSelector: nameSelector,
-				TeamSelector: teamSelector,
-				Form: Form{
-					Options: []string{"option 1", "option 2", "option 3"},
-				},
+func initModel() gotea.Session {
+	return gotea.Session{
+		State: Model{
+			Router: &gotea.Router{
+				Route: "/home",
 			},
-		}
+			MemoryGame: MemoryGame{
+				Deck:              NewDeck(4),
+				TurnsTaken:        0,
+				LastAttemptedCard: 5, //hack
+				Score:             0,
+			},
+			NameSelector: nameSelector,
+			TeamSelector: teamSelector,
+			Form: Form{
+				Options: []string{"option 1", "option 2", "option 3"},
+			},
+		},
 	}
+}
 
-	// Register all the message maps
-	app.Messages.
-		MergeMap(memoryGameMessages).
-		MergeMap(formMessages).
-		MergeMap(nameSelector.UniqueMsgMap(nameSelectorMessages)).
-		MergeMap(teamSelector.UniqueMsgMap(teamSelectorMessages))
+func main() {
+	app := gotea.NewApp(
+		initModel,
+		memoryGameMessages,
+		formMessages,
+		nameSelector.UniqueMsgMap(nameSelectorMessages),
+		teamSelector.UniqueMsgMap(teamSelectorMessages),
+	)
 
 	// Start the app
 	fmt.Println("starting server")

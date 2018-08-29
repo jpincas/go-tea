@@ -250,24 +250,28 @@ func (app Application) render(state State, templates *template.Template) []byte 
 	return buf.Bytes()
 }
 
-// App kicks everything off, holding the global application state
-func NewApp() *Application {
+// And finally you are ready to start gotea.
+
+// NewApp is used by the calling application to set up a new gotea app
+func NewApp(sessionInitialiser func() Session, msgMaps ...MessageMap) *Application {
+	// Rather than starting with a completely blank maessage map,
+	// we start with some built in go-tea messages.
+	builtInMessages := MessageMap{
+		"CHANGE_ROUTE": changeRoute,
+	}
+
 	return &Application{
-		Sessions: SessionStore{},
-		// Rather than starting with a completely blank maessage map,
-		// we start with some built in go-tea messages.
-		// Therefore, when defining your application message map, you will ADD
-		// it to this existing map, rather than overwrite it.
-		// gotea provides the ''MergeMap' method on MessageMap for that!
-		Messages: MessageMap{
-			"CHANGE_ROUTE": changeRoute,
-		},
+		NewSession: sessionInitialiser,
+		Sessions:   SessionStore{},
+		// Combine the built-in messages with the application level messages
+		Messages:      mergeMaps(builtInMessages, msgMaps...),
 		ErrorTemplate: template.Must(template.New("error").Parse(errorTemplate)),
 	}
 }
 
-// And finally you are ready to start gotea.
-
+// addAppContext is a middleware wrapper for the websocket handler
+// It adds the App pointer to the context of the request
+// so that the handler can reference the App without it having to be a global
 func addAppContext(websocketHandler http.HandlerFunc, app *Application) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(r.Context(), "app", app)
@@ -286,7 +290,9 @@ func (app *Application) Start(distDirectory string, port int, customFuncMap temp
 	app.parseTemplates(customFuncMap, templateLocations...)
 
 	router := chi.NewRouter()
-	// Attach the websocket handler at /server
+
+	// Attach the websocket handler at /server,
+	// wrapping it with the app context middleware established above
 	router.Get("/server", addAppContext(websocketHandler, app))
 
 	// Attach the static file serer at /dist
