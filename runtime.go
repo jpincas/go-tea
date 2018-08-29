@@ -2,6 +2,7 @@ package gotea
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -44,30 +45,28 @@ type SessionStore []*Session
 // to provide (more on that later),
 // adds the session to the session store so we can keep track of it,
 // and finally, does an initial render (again, more on that coming up)
-func newSession(conn *websocket.Conn) (*Session, error) {
-	session := App.NewSession()
+func (app *Application) newSession(conn *websocket.Conn) (*Session, error) {
+	session := app.NewSession()
 	session.Conn = conn
-	session.add()
-
-	session.render()
-
+	session.add(app)
+	session.render(app)
 	return &session, nil
 }
 
 // add simply updates the list of active sessions, as explained above.
-func (session *Session) add() {
-	App.Sessions = append(App.Sessions, session)
+func (session *Session) add(app *Application) {
+	app.Sessions = append(app.Sessions, session)
 }
 
 // remove, as you could expect, just removes the session from the session store.
-func (session *Session) remove() {
-	for i, stored := range App.Sessions {
+func (session *Session) remove(app *Application) {
+	for i, stored := range app.Sessions {
 		if stored == session {
 			// safe delete NOT preserving order
 			// https://github.com/golang/go/wiki/SliceTricks
-			App.Sessions[i] = App.Sessions[len(App.Sessions)-1]
-			App.Sessions[len(App.Sessions)-1] = nil
-			App.Sessions = App.Sessions[:len(App.Sessions)-1]
+			app.Sessions[i] = app.Sessions[len(app.Sessions)-1]
+			app.Sessions[len(app.Sessions)-1] = nil
+			app.Sessions = app.Sessions[:len(app.Sessions)-1]
 		}
 	}
 }
@@ -79,14 +78,14 @@ func (session *Session) remove() {
 // this is what the client sees in their browser.
 // The JS part of gotea takes this HTML and patches it efficiently onto
 // the existing DOM, so the browser only updates what has actually changed
-func (session *Session) render() {
+func (session *Session) render(app *Application) {
 	if session.Conn == nil {
 		// Oops! There's no socket connection
 		log.Println("Could not render, no socket to render to")
 		return
 	}
 
-	session.Conn.WriteMessage(1, App.render(session.State, App.Templates))
+	session.Conn.WriteMessage(1, app.render(session.State, app.Templates))
 }
 
 // But on its own, the above would be quite boring,
@@ -129,8 +128,8 @@ type MessageMap map[string]MessageHandler
 // and any further messages are sent for processing in the same way (recursively).
 // Finally, a render of the new state takes place, sending new HTML down the websocket to the client,
 // and starting the cycle again.
-func (message Message) Process(session *Session) error {
-	funcToExecute, found := App.Messages[message.Message]
+func (message Message) Process(session *Session, app *Application) error {
+	funcToExecute, found := app.Messages[message.Message]
 	if !found {
 		return fmt.Errorf("Could not process message %s: message does not exist", message.Message)
 	}
@@ -142,11 +141,11 @@ func (message Message) Process(session *Session) error {
 	}
 
 	session.State = newState
-	session.render()
+	session.render(app)
 
 	// TODO: new thread?
 	if nextMessage != nil {
-		nextMessage.Process(session)
+		nextMessage.Process(session, app)
 	}
 
 	return nil
@@ -179,16 +178,19 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// get the app from the context
+	app := r.Context().Value("app").(*Application)
+
 	// create a new session
 	// this will use the state seeder to create a default state
-	session, err := newSession(conn)
+	session, err := app.newSession(conn)
 	if err != nil {
-		renderError(conn, err)
+		renderError(app, conn, err)
 	}
 
 	// defer closing the connection and removing it from the session
 	defer conn.Close()
-	defer session.remove()
+	defer session.remove(app)
 
 	// the main runtime loop
 	for {
@@ -197,13 +199,13 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 		var message Message
 		err := conn.ReadJSON(&message)
 		if err != nil {
-			renderError(conn, err)
+			renderError(app, conn, err)
 			break
 		}
 
 		// and send for processing
-		if err := message.Process(session); err != nil {
-			renderError(conn, err)
+		if err := message.Process(session, app); err != nil {
+			renderError(app, conn, err)
 		}
 
 	}
@@ -249,20 +251,29 @@ func (app Application) render(state State, templates *template.Template) []byte 
 }
 
 // App kicks everything off, holding the global application state
-var App = Application{
-	Sessions: SessionStore{},
-	// Rather than starting with a completely blank maessage map,
-	// we start with some built in go-tea messages.
-	// Therefore, when defining your application message map, you will ADD
-	// it to this existing map, rather than overwrite it.
-	// gotea provides the ''MergeMap' method on MessageMap for that!
-	Messages: MessageMap{
-		"CHANGE_ROUTE": changeRoute,
-	},
-	ErrorTemplate: template.Must(template.New("error").Parse(errorTemplate)),
+func NewApp() *Application {
+	return &Application{
+		Sessions: SessionStore{},
+		// Rather than starting with a completely blank maessage map,
+		// we start with some built in go-tea messages.
+		// Therefore, when defining your application message map, you will ADD
+		// it to this existing map, rather than overwrite it.
+		// gotea provides the ''MergeMap' method on MessageMap for that!
+		Messages: MessageMap{
+			"CHANGE_ROUTE": changeRoute,
+		},
+		ErrorTemplate: template.Must(template.New("error").Parse(errorTemplate)),
+	}
 }
 
 // And finally you are ready to start gotea.
+
+func addAppContext(websocketHandler http.HandlerFunc, app *Application) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), "app", app)
+		websocketHandler.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
 
 // Start creates the router, and serves it!
 func (app *Application) Start(distDirectory string, port int, customFuncMap template.FuncMap, templateLocations ...string) {
@@ -276,7 +287,7 @@ func (app *Application) Start(distDirectory string, port int, customFuncMap temp
 
 	router := chi.NewRouter()
 	// Attach the websocket handler at /server
-	router.Get("/server", websocketHandler)
+	router.Get("/server", addAppContext(websocketHandler, app))
 
 	// Attach the static file serer at /dist
 	fileServer(router, "/dist", http.Dir(distDirectory))
@@ -304,7 +315,7 @@ var errorTemplate = `
 `
 
 // renderError renders the above error template
-func renderError(conn *websocket.Conn, err error) {
+func renderError(app *Application, conn *websocket.Conn, err error) {
 	if conn == nil {
 		// Oops! There's no socket connection
 		log.Println("Could not render, no socket to render to")
@@ -318,7 +329,7 @@ func renderError(conn *websocket.Conn, err error) {
 		err.Error(),
 	}
 
-	App.ErrorTemplate.Execute(&tpl, templateData)
+	app.ErrorTemplate.Execute(&tpl, templateData)
 	conn.WriteMessage(1, tpl.Bytes())
 }
 
@@ -328,10 +339,10 @@ func renderError(conn *websocket.Conn, err error) {
 // because of some change in global state, there's an easy function for that
 
 // Broadcast re-renders every active session
-func (app Application) Broadcast() {
+func (app *Application) Broadcast() {
 	for _, session := range app.Sessions {
 		if session.Conn != nil {
-			session.render()
+			session.render(app)
 		}
 	}
 }

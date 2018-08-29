@@ -18,8 +18,10 @@ type Model struct {
 }
 
 func main() {
+	app := gotea.NewApp()
+
 	// Register the function that returns a new session
-	gotea.App.NewSession = func() gotea.Session {
+	app.NewSession = func() gotea.Session {
 		return gotea.Session{
 			State: Model{
 				Router: &gotea.Router{
@@ -41,7 +43,7 @@ func main() {
 	}
 
 	// Register all the message maps
-	gotea.App.Messages.
+	app.Messages.
 		MergeMap(memoryGameMessages).
 		MergeMap(formMessages).
 		MergeMap(nameSelector.UniqueMsgMap(nameSelectorMessages)).
@@ -58,5 +60,5 @@ func main() {
 		},
 	}
 
-	gotea.App.Start("dist", 8080, templateFuncs, "templates/*.html", "../components/*/*.html")
+	app.Start("dist", 8080, templateFuncs, "templates/*.html", "../components/*/*.html")
 }
