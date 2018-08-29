@@ -61,9 +61,9 @@ function sendMessageWithValue(message, inputID) {
 }
 
 window.gotea = {
-  sendMessage: debounce(sendMessage, 200, { leading: true }),
-  submitForm: debounce(submitForm, 200, { leading: true }),
-  sendMessageWithValue: debounce(sendMessageWithValue, 200, { leading: true })
+  sendMessage: debounce(sendMessage, 1200, { leading: true }),
+  submitForm: debounce(submitForm, 1200, { leading: true }),
+  sendMessageWithValue: debounce(sendMessageWithValue, 1200, { leading: true })
 };
 
 const serializeForm = formID => {
