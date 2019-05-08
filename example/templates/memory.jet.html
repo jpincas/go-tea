@@ -1,0 +1,49 @@
+{{extends "layout"}}
+{{block title()}} Memory Game {{end}}
+
+
+{{block body()}}
+<h2>Turns Taken: {{ .MemoryGame.TurnsTaken }}</h2>
+<h2>Pairs Found: {{ .MemoryGame.Score }}</h2>
+<h2>Best Score: {{ .MemoryGame.BestScore }}</h2>
+
+
+{{ yield deck() .MemoryGame.Deck }}
+{{ if .MemoryGame.HasWon() }}
+<h2>Well Done! You Won!</h2>
+<button onclick='{{ goteaMessage(`RESTART_GAME`, ``) }}'>
+    New Game
+</button>
+{{ end }}
+{{end}}
+
+
+{{block deck()}}
+<div id="deck">
+    {{ range index, thisCard := . }}
+
+    <div class="card-container">
+        {{ yield card() thisCard }}
+        <!-- spacer -->
+        {{ if !thisCard.Matched }}
+        <button class='flipcard' onclick='{{ goteaMessage(`FLIP_CARD`, index) }}'>
+            Flip
+        </button>
+        {{ end }}
+
+    </div>
+    {{ end }}
+</div>
+{{ end }}
+
+
+{{block card()}}
+<div class="card 
+        {{ if .Flipped }} faceup {{ else }} facedown {{ end }}
+        {{ if .Matched }} matched {{ else }} unmatched {{ end }}">
+    <span class="value">
+        {{ if .Flipped }} {{ .Value }}
+        {{ end }}
+    </span>
+</div>
+{{ end }}

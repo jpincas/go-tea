@@ -12,6 +12,7 @@ var memoryGameMessages gotea.MessageMap = gotea.MessageMap{
 	"FLIP_CARD":      FlipCard,
 	"REMOVE_MATCHES": RemoveMatches,
 	"FLIP_ALL_BACK":  FlipAllBack,
+	"RESTART_GAME":   RestartGame,
 }
 
 type MemoryGame struct {
@@ -19,6 +20,7 @@ type MemoryGame struct {
 	LastAttemptedCard int
 	TurnsTaken        int
 	Score             int
+	BestScore         int
 }
 
 func (m *MemoryGame) takeTurn() {
@@ -27,6 +29,11 @@ func (m *MemoryGame) takeTurn() {
 
 func (m *MemoryGame) incrementScore() {
 	m.Score++
+}
+
+func (m *MemoryGame) resetScores() {
+	m.TurnsTaken = 0
+	m.Score = 0
 }
 
 func (m MemoryGame) HasWon() bool {
@@ -78,6 +85,13 @@ func FlipCard(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message,
 	return state, nil, nil
 }
 
+func RestartGame(_ json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
+	state := s.(Model)
+	state.MemoryGame.Deck.reset()
+	state.MemoryGame.resetScores()
+	return state, nil, nil
+}
+
 func FlipAllBack(_ json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
 	time.Sleep(500 * time.Millisecond)
 	state := s.(Model)
@@ -89,6 +103,13 @@ func RemoveMatches(_ json.RawMessage, s gotea.State) (gotea.State, *gotea.Messag
 	time.Sleep(500 * time.Millisecond)
 	state := s.(Model)
 	state.MemoryGame.Deck.removeMatches()
+
+	if state.MemoryGame.HasWon() {
+		if state.MemoryGame.BestScore == 0 || state.MemoryGame.TurnsTaken < state.MemoryGame.BestScore {
+			state.MemoryGame.BestScore = state.MemoryGame.TurnsTaken
+		}
+	}
+
 	return state, nil, nil
 }
 
@@ -142,5 +163,12 @@ func (deck Deck) removeMatches() {
 			deck[i].Matched = true
 			deck[i].Flipped = false
 		}
+	}
+}
+
+func (deck Deck) reset() {
+	for i := range deck {
+		deck[i].Matched = false
+		deck[i].Flipped = false
 	}
 }

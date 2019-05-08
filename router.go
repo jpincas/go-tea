@@ -2,7 +2,6 @@ package gotea
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/url"
 	"strings"
 )
@@ -33,6 +32,7 @@ func (r *Router) SetRoute(newRoute string) {
 }
 
 func (r Router) GetRoute() string {
+
 	// Trim any / at the start/end
 	s := strings.Trim(r.Route, "/")
 
@@ -48,9 +48,13 @@ func (r Router) GetRoute() string {
 // RouteTemplate is a helper for associating a template file to a route
 // It replaces all intermediate slashes with an underscore, so
 // /baseroute/subroute -> baseroute_subroute.html
-func (r Router) RouteTemplate(extension string) string {
-	underscoredRoute := strings.Replace(r.GetRoute(), "/", "_", -1)
-	return fmt.Sprintf("%s.%s", underscoredRoute, extension)
+func (r Router) RouteTemplate(homeTemplate string) string {
+	routeTemplate := strings.Replace(r.GetRoute(), "/", "_", -1)
+	if routeTemplate == "" {
+		return homeTemplate
+	}
+
+	return routeTemplate
 }
 
 func (r Router) RouteParam(param string) string {

@@ -1,0 +1,45 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>{{yield title()}}</title>
+    <link rel="stylesheet" href="static/styles.css">
+    <link rel="stylesheet" href="../../components/tagselector/tagselector.css">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700" rel="stylesheet">
+    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgo=">
+
+</head>
+
+<body>
+    <div class="navbar">
+        <ul>
+            <li>
+                <a href="/">Home</a>
+            </li>
+            <li>
+                <a href="/memory">Memory Game</a>
+            </li>
+            <li>
+                <a href="/form">Form</a>
+            </li>
+            <li>
+                <a href="/components">Components</a>
+            </li>
+            <li>
+                <a href="/routing">Routing</a>
+            </li>
+            <li>
+                Current Route: {{ .Router.Route }}
+            </li>
+        </ul>
+    </div>
+
+    <div id="view">
+        {{yield body()}}
+    </div>
+    <script src="static/gotea.js"></script>
+</body>
+
+</html>
