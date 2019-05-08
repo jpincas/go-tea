@@ -1,3 +1,7 @@
+{{extends "layout"}}
+{{block title()}}Components Demo{{end}}
+
+{{block body()}}
 <h2>Components Demo</h2>
 
 <p>Two instantiations of the 'tag selector' component, running side-by-side</p>
@@ -5,10 +9,11 @@
 <div>
     <div>
         <h3>Select a Name</h3>
-        {{ template "tagselector.html" .NameSelector }}
+        {{ include "tagselector" .NameSelector }}
     </div>
     <div>
         <h3>Select a Team</h3>
-        {{ template "tagselector.html" .TeamSelector }}
+        {{ include "tagselector" .TeamSelector }}
     </div>
 </div>
+{{end}}

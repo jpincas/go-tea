@@ -1,33 +1,34 @@
 import morphdom from "morphdom";
-import serialize from "form-serialize";
-import debounce from "./debounce";
+
 
 // Websockets
 const socket = new WebSocket(
-  (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/server"
+  (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host + "/server?whence=" + document.location.pathname
 );
 
-socket.onopen = () => {
-  const path = window.location.pathname;
-  if (path != "/") {
-    changeRoute(path);
-  }
-};
+// socket.onopen = () => {
+//   const path = window.location.pathname;
+//   if (path != "/") {
+//     changeRoute(path);
+//   }
+// };
 
 socket.onmessage = event => {
-  swapDOM(event.data, "view");
+  morphdom(document.documentElement, event.data, {
+    childrenOnly: true
+  });
 };
 
 // DOM Swap with Morphdom
 // with the option 'childrenOnly' Morphom swaps children of the containers,
 // therefore we place the incoming HTML in a div
-const swapDOM = (incomingHTML, containerID) => {
-  const el1 = document.createElement("div");
-  el1.innerHTML = incomingHTML;
-  morphdom(document.getElementById(containerID), el1, {
-    childrenOnly: true
-  });
-};
+// const swapDOM = (incomingHTML) => {
+//   // const el1 = document.createElement("div");
+//   // el1.innerHTML = incomingHTML;
+//   morphdom(document.getElementById(containerID), incomingHTML, {
+//     childrenOnly: true
+//   });
+// };
 
 const sendMessage = (msgString, args) => {
   const msg = {
@@ -61,9 +62,9 @@ function sendMessageWithValue(message, inputID) {
 }
 
 window.gotea = {
-  sendMessage: debounce(sendMessage, 1200, { leading: true }),
-  submitForm: debounce(submitForm, 1200, { leading: true }),
-  sendMessageWithValue: debounce(sendMessageWithValue, 1200, { leading: true })
+  sendMessage: sendMessage,
+  submitForm: submitForm,
+  sendMessageWithValue: sendMessageWithValue
 };
 
 const serializeForm = formID => {
@@ -77,10 +78,9 @@ const serializeForm = formID => {
   // map over array of options (elements children). If option is selected, return it's value
   // otherwise return empty string and then filter out empty strings from the array so we end up
   // with array of selected options.
-  const buildSelectArray = select =>
-    [...select.children]
-      .map(option => (option.selected ? option.value : ""))
-      .filter(value => value.length > 0);
+  const buildSelectArray = select => [...select.children]
+    .map(option => (option.selected ? option.value : ""))
+    .filter(value => value.length > 0);
 
   // if select has multiple attribute, build array of selected options,
   // otherwise, for dropdown for example, return select's value
@@ -133,10 +133,22 @@ function changeRoute(route) {
   socket.send(JSON.stringify(msg));
 }
 
+
+// For some reason only work when place on Window
+window.addEventListener('popstate', function (event) {
+  const msg = {
+    message: "CHANGE_ROUTE",
+    args: document.location.pathname,
+  };
+
+  console.log("Sending websocket message: ", msg);
+  socket.send(JSON.stringify(msg));
+});
+
 document.addEventListener(
   "click",
   e => {
-    if (/gotea-link/.test(e.target.className)) {
+    if (e.target.tagName == 'A' && /external/.test(e.target.className) == false) {
       e.preventDefault();
       changeRoute(e.target.getAttribute("href"));
       return false;

@@ -1,3 +1,3 @@
 #!/bin/sh
 
-find ./*go ../components ./templates | entr ./restart.sh "$@"
+find ../*go ./*go ../components ./templates | entr ./restart.sh "$@"

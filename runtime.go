@@ -1,14 +1,14 @@
 package gotea
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"html/template"
+	"io"
 	"log"
 	"net/http"
 
+	"github.com/CloudyKit/jet"
 	"github.com/go-chi/chi"
 	"github.com/gorilla/websocket"
 )
@@ -43,13 +43,14 @@ type SessionStore []*Session
 // It assigns the specified websocket connection to the session,
 // sets the initial state by calling a special function that your application needs
 // to provide (more on that later),
-// adds the session to the session store so we can keep track of it,
-// and finally, does an initial render (again, more on that coming up)
-func (app *Application) newSession(conn *websocket.Conn) (*Session, error) {
-	session := app.NewSession()
+// adds the session to the session store so we can keep track of it.
+func (app *Application) newSession(conn *websocket.Conn, path string) (*Session, error) {
+	session := Session{
+		State: app.newState(path),
+	}
 	session.Conn = conn
 	session.add(app)
-	session.render(app)
+
 	return &session, nil
 }
 
@@ -78,14 +79,30 @@ func (session *Session) remove(app *Application) {
 // this is what the client sees in their browser.
 // The JS part of gotea takes this HTML and patches it efficiently onto
 // the existing DOM, so the browser only updates what has actually changed
-func (session *Session) render(app *Application) {
+func (session *Session) render(app *Application, errorToRender error) {
 	if session.Conn == nil {
 		// Oops! There's no socket connection
 		log.Println("Could not render, no socket to render to")
 		return
 	}
 
-	session.Conn.WriteMessage(1, app.render(session.State, app.Templates))
+	w, err := session.Conn.NextWriter(1)
+
+	if err != nil {
+		log.Printf("Error opening websocket connection writer: %v\n", err)
+		return
+	}
+
+	if errorToRender == nil {
+		app.render(w, session.State)
+	} else {
+		app.renderError(w, session.State, errorToRender)
+	}
+
+	if err := w.Close(); err != nil {
+		log.Printf("Error closing websocket connection writer: %v\n", err)
+		return
+	}
 }
 
 // But on its own, the above would be quite boring,
@@ -141,7 +158,7 @@ func (message Message) Process(session *Session, app *Application) error {
 	}
 
 	session.State = newState
-	session.render(app)
+	session.render(app, nil)
 
 	// TODO: new thread?
 	if nextMessage != nil {
@@ -181,11 +198,20 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 	// get the app from the context
 	app := r.Context().Value("app").(*Application)
 
+	// The session needs to know which route it is starting from,
+	// else the first template render will fail.
+	// We can't just use the path from the URL, since the websocket
+	// connection is always through /server.
+	// Therefore, the JS adds a ?whence=route parameter to /server
+	// when making the connection, so we get the starting route from there
+	r.ParseForm()
+	startingRoute := r.URL.Query().Get("whence")
+
 	// create a new session
 	// this will use the state seeder to create a default state
-	session, err := app.newSession(conn)
+	session, err := app.newSession(conn, startingRoute)
 	if err != nil {
-		renderError(app, conn, err)
+		session.render(app, err)
 	}
 
 	// defer closing the connection and removing it from the session
@@ -194,18 +220,17 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 
 	// the main runtime loop
 	for {
-
 		// read the incoming message
 		var message Message
 		err := conn.ReadJSON(&message)
 		if err != nil {
-			renderError(app, conn, err)
+			session.render(app, err)
 			break
 		}
 
 		// and send for processing
 		if err := message.Process(session, app); err != nil {
-			renderError(app, conn, err)
+			session.render(app, err)
 		}
 
 	}
@@ -216,21 +241,19 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 
 // Application is the holder for all the bits and pieces go-tea needs
 type Application struct {
-	// ErrorTemplate is the system template for rendering all errors
-	ErrorTemplate *template.Template
-
 	// MessageMap is the global map of messages -> message handling functions
 	Messages MessageMap
 
 	// Sessions is a list of the current active sessions
 	Sessions SessionStore
 
-	// NewSession is the function assigned by our application
-	// to initialise a new sesson with a default initial state.
-	NewSession func() Session
-
 	// Templates for rending, provided by the appication
-	Templates *template.Template
+	Templates *jet.Set
+
+	HomeTemplate    string
+	NewState        func() State
+	Port            int
+	StaticDirectory string
 }
 
 // render is the main render function for the whole app
@@ -238,22 +261,45 @@ type Application struct {
 // It will look for a template whose name matches the route, e.g.
 // /myroute -> myroute.html
 // /myroute/subroute -> myroute_subroute.html
-func (app Application) render(state State, templates *template.Template) []byte {
-	templateName := state.RouteTemplate("html")
 
-	buf := bytes.Buffer{}
-	err := templates.ExecuteTemplate(&buf, templateName, state)
+func write(w io.Writer, t *jet.Template, state State, vars jet.VarMap) error {
+	return t.Execute(w, vars, state)
+}
+
+func (app Application) renderError(w io.Writer, state State, errorToRender error) {
+	// If no 'error' template has been specified, just write the error
+	t, err := app.Templates.GetTemplate("error")
 	if err != nil {
-		return []byte(fmt.Sprintf("Executing template %s. Error: %v", templateName, err))
+		w.Write([]byte(err.Error()))
+		return
 	}
 
-	return buf.Bytes()
+	vars := make(jet.VarMap)
+	vars.Set("Msg", errorToRender.Error())
+
+	write(w, t, state, vars)
+}
+
+func (app Application) render(w io.Writer, state State) {
+	templateName := state.RouteTemplate(app.HomeTemplate)
+
+	t, err := app.Templates.GetTemplate(templateName)
+	if err != nil {
+		app.renderError(w, state, err)
+		return
+	}
+
+	vars := make(jet.VarMap)
+	if err = write(w, t, state, vars); err != nil {
+		app.renderError(w, state, err)
+		return
+	}
 }
 
 // And finally you are ready to start gotea.
 
 // NewApp is used by the calling application to set up a new gotea app
-func NewApp(sessionInitialiser func() Session, msgMaps ...MessageMap) *Application {
+func NewApp(stateInitialiser func() State, msgMaps ...MessageMap) *Application {
 	// Rather than starting with a completely blank maessage map,
 	// we start with some built in go-tea messages.
 	builtInMessages := MessageMap{
@@ -261,12 +307,21 @@ func NewApp(sessionInitialiser func() Session, msgMaps ...MessageMap) *Applicati
 	}
 
 	return &Application{
-		NewSession: sessionInitialiser,
-		Sessions:   SessionStore{},
+		NewState: stateInitialiser,
+		Sessions: SessionStore{},
 		// Combine the built-in messages with the application level messages
-		Messages:      mergeMaps(builtInMessages, msgMaps...),
-		ErrorTemplate: template.Must(template.New("error").Parse(errorTemplate)),
+		Messages:        mergeMaps(builtInMessages, msgMaps...),
+		Templates:       parseTemplates(),
+		Port:            8080,
+		StaticDirectory: "static",
+		HomeTemplate:    "home",
 	}
+}
+
+func (app Application) newState(path string) State {
+	state := app.NewState()
+	state.SetRoute(path)
+	return state
 }
 
 // addAppContext is a middleware wrapper for the websocket handler
@@ -280,14 +335,10 @@ func addAppContext(websocketHandler http.HandlerFunc, app *Application) http.Han
 }
 
 // Start creates the router, and serves it!
-func (app *Application) Start(distDirectory string, port int, customFuncMap template.FuncMap, templateLocations ...string) {
-	if app.NewSession == nil {
+func (app *Application) Start() {
+	if app.NewState == nil {
 		log.Fatalln("ERROR: No session state seeder function specificied.  Exiting...")
 	}
-
-	// Parse the templates at the defined locations
-	// and incorporating the custom func map
-	app.parseTemplates(customFuncMap, templateLocations...)
 
 	router := chi.NewRouter()
 
@@ -296,50 +347,21 @@ func (app *Application) Start(distDirectory string, port int, customFuncMap temp
 	router.Get("/server", addAppContext(websocketHandler, app))
 
 	// Attach the static file serer at /dist
-	fileServer(router, "/dist", http.Dir(distDirectory))
+	fileServer(router, "/static", http.Dir(app.StaticDirectory))
 
 	// For all other routes, serve index.html
 	router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, distDirectory+"/index.html")
+		state := app.newState(r.URL.Path)
+		app.render(w, state)
 	})
 
-	http.ListenAndServe(fmt.Sprintf(":%v", port), router)
+	// Start the app
+	fmt.Printf("Starting application server on %v", app.Port)
+	http.ListenAndServe(fmt.Sprintf(":%v", app.Port), router)
 }
 
 // That's all the important stuff.
 // There are just a few other odds and ends.
-
-// Error handling at various points in the gotea runtime is handled by a simple
-// error rendering procedure.
-
-// errorTemplate is the HTML used to render errors
-var errorTemplate = `
-<h1>Whoops!</h1>
-<h2>There was a gotea runtime error</h2>
-<hr />
-<p>{{ .ErrorMessage }}</p>
-`
-
-// renderError renders the above error template
-func renderError(app *Application, conn *websocket.Conn, err error) {
-	if conn == nil {
-		// Oops! There's no socket connection
-		log.Println("Could not render, no socket to render to")
-		return
-	}
-	tpl := bytes.Buffer{}
-
-	templateData := struct {
-		ErrorMessage string
-	}{
-		err.Error(),
-	}
-
-	app.ErrorTemplate.Execute(&tpl, templateData)
-	conn.WriteMessage(1, tpl.Bytes())
-}
-
-// That's all there is to error handling.
 
 // If your application needs to rerender all active sessions
 // because of some change in global state, there's an easy function for that
@@ -348,7 +370,7 @@ func renderError(app *Application, conn *websocket.Conn, err error) {
 func (app *Application) Broadcast() {
 	for _, session := range app.Sessions {
 		if session.Conn != nil {
-			session.render(app)
+			session.render(app, nil)
 		}
 	}
 }

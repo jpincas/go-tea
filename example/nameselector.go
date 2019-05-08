@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	gotea "github.com/jpincas/go-tea"
-	"github.com/jpincas/go-tea/components/tagselector"
+	"github.com/jpincas/go-tea/example/tagselector"
 )
 
 // Name Selector (instantiation of Tag Selector)

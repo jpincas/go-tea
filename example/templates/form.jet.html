@@ -1,0 +1,63 @@
+{{extends "layout"}}
+{{block title()}}GoTea Example{{end}}
+{{block body()}}
+
+<h1>Form Example</h1>
+
+{{ form := .Form }}
+
+<div class="row">
+
+        <form class="equalchild" id="my-form">
+                <h2>Text Input</h2>
+                <input class="input" type="text" placeholder="Some simple text inout" value="{{ form.TextInput }}"
+                        name="textInput" onkeyup='{{ goteaForm(`FORM_UPDATE`, `my-form`) }}'>
+
+                <h2>Simple Select</h2>
+                <select name='selectInput' onchange='{{ goteaForm(`FORM_UPDATE`, `my-form`) }}'>
+                        {{ range form.Options }}
+                        <option value="{{ . }}"" {{ if form.SelectInput == . }} selected {{ end }}>
+                                {{ . }}
+                        </option>
+                        {{ end }}
+                </select>
+
+                <h2>Multiple Select</h2>
+                <select name='MultipleTextInput' onchange='{{ goteaForm(`FORM_UPDATE`, `my-form`) }}' size=" 4"
+                                multiple>
+                        <option value="first" {{ if memberString (`first`, form.MultipleTextInput) }} selected
+                                {{ end }}>
+                                first</option>
+                        <option value="second" {{ if memberString (`second`, form.MultipleTextInput) }} selected
+                                {{ end }}>second</option>
+                        <option value="third" {{ if memberString (`third`, form.MultipleTextInput) }} selected
+                                {{ end }}>
+                                third</option>
+                        <option value="fourth" {{ if memberString (`fourth`, form.MultipleTextInput) }} selected
+                                {{ end }}>fourth</option>
+                </select>
+
+                <h2>Text Area</h2>
+                <textarea onkeyup='{{ goteaForm(`FORM_UPDATE`, `my-form`) }}' name="TextboxInput" rows="10"
+                        cols="30">{{ form.TextboxInput }}</textarea>
+
+                <h2>Radio</h2>
+                <input type="radio" name="RadioTextInput" value="male"
+                        onchange='{{ goteaForm(`FORM_UPDATE`, `my-form`) }}' {{ if form.RadioTextInput == `male` }}
+                        checked {{end}}>Male
+                <input type="radio" name="RadioTextInput" value="female"
+                        onchange='{{ goteaForm(`FORM_UPDATE`, `my-form`) }}' {{ if form.RadioTextInput == `female` }}
+                        checked {{end}}>Female
+
+                <h2>Checkbox</h2>
+                <input onchange='{{ goteaForm(`FORM_UPDATE`, `my-form`) }}
+               ' type="checkbox" name="CheckboxInput" {{ if form.CheckboxInput }} checked {{ end }}> True?
+        </form>
+
+        <div class="equalchild">
+                <h2>State</h2>
+                {{ prettyPrint(form) | raw }}
+        </div>
+</div>
+
+{{end}}

@@ -1,0 +1,30 @@
+{{extends "layout"}}
+{{block title()}} Routing Example {{end}}
+
+{{block body()}}
+<h2>Routing</h2>
+
+<h3>Current Route: {{ .Router.Route }}</h3>
+
+<p>The main navigation bar above is an example of GoTea routing.</p>
+<p>Clicking on any of the links triggers a "CHANGE_ROUTE" message to be sent, with the new route as an argument. The
+    application code simply sets a state property according to the new route and the main template/view uses conditional
+    rendering to carry on rendering the app with the correct template. Try it out!</p>
+
+<h3>Here's an internal link:</h3>
+<a href="/memory">Memory Game</a>
+
+<h3>Here's an external link:</h3>
+<a class="external" target="_blank" href="https://duckduckgo.com">Search DuckDuckGo</a>
+
+<h3>Route Parameters</h3>
+
+<ul>
+    <li><a href="/routing?myparam=1">myparam = 1</a></li>
+    <li><a href="/routing?myparam=2">myparam = 2</a></li>
+    <li><a href="/routing?myparam=3">myparam = 3</a></li>
+</ul>
+
+<h4>Value of 'myparam': {{  .RouteParam("myparam") }}</h4>
+
+{{end}}
