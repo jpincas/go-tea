@@ -1,7 +1,6 @@
 package gotea
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -187,16 +186,13 @@ var upgrader = websocket.Upgrader{
 // - waits for a message from the client
 // - sends the messages for processing
 // - waits again
-func websocketHandler(w http.ResponseWriter, r *http.Request) {
+func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request) {
 	// upgrade the connections
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print("upgrade:", err)
 		return
 	}
-
-	// get the app from the context
-	app := r.Context().Value("app").(*Application)
 
 	// The session needs to know which route it is starting from,
 	// else the first template render will fail.
@@ -324,16 +320,6 @@ func (app Application) newState(path string) State {
 	return state
 }
 
-// addAppContext is a middleware wrapper for the websocket handler
-// It adds the App pointer to the context of the request
-// so that the handler can reference the App without it having to be a global
-func addAppContext(websocketHandler http.HandlerFunc, app *Application) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := context.WithValue(r.Context(), "app", app)
-		websocketHandler.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
 // Start creates the router, and serves it!
 func (app *Application) Start() {
 	if app.NewState == nil {
@@ -344,7 +330,7 @@ func (app *Application) Start() {
 
 	// Attach the websocket handler at /server,
 	// wrapping it with the app context middleware established above
-	router.Get("/server", addAppContext(websocketHandler, app))
+	router.Get("/server", app.websocketHandler)
 
 	// Attach the static file serer at /dist
 	fileServer(router, "/static", http.Dir(app.StaticDirectory))
