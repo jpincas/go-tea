@@ -27,6 +27,10 @@ func (r Router) FireUpdateHook(s State) State {
 	return s
 }
 
+var routingMessages = MessageMap{
+	"CHANGE_ROUTE": changeRoute,
+}
+
 func (r *Router) SetRoute(newRoute string) {
 	r.Route = newRoute
 }

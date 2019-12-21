@@ -25,7 +25,10 @@ import (
 // It can essentially be anything  - you define it as a struct in your application code.
 // Conventionally, you'd call it 'Model', but you don't have to!
 // You get a router by embedding the go-tea Router in your model
-type State Routable
+type State interface {
+	InitState() State
+	Routable
+}
 
 // Session is just a holder for a websocket connection (or more accurately, a pointer to one),
 // and a lump of state (see above).  When a client connects, a new session is opened with a pointer
@@ -147,9 +150,16 @@ type MessageMap map[string]MessageHandler
 // Finally, a render of the new state takes place, sending new HTML down the websocket to the client,
 // and starting the cycle again.
 func (message Message) Process(session *Session, app *Application) error {
-	funcToExecute, found := app.Messages[message.Message]
+	// Try system messages first.
+	// At the moment, just the router, but could expand
+	systemMessages := routingMessages
+	funcToExecute, found := systemMessages[message.Message]
 	if !found {
-		return fmt.Errorf("Could not process message %s: message does not exist", message.Message)
+		// Care to overwrite the funcToExecute variable above
+		funcToExecute, found = app.Messages[message.Message]
+		if !found {
+			return fmt.Errorf("Could not process message %s: message does not exist", message.Message)
+		}
 	}
 
 	newState, nextMessage, err := funcToExecute(message.Arguments, session.State)
@@ -264,7 +274,7 @@ type Application struct {
 
 	Router *chi.Mux
 
-	NewState func() State
+	Model State
 }
 
 // render is the main render function for the whole app
@@ -310,19 +320,13 @@ func (app Application) render(w io.Writer, state State) {
 // And finally you are ready to start gotea.
 
 // NewApp is used by the calling application to set up a new gotea app
-func NewApp(config AppConfig, stateInitialiser func() State, msgMaps ...MessageMap) *Application {
-	// Rather than starting with a completely blank maessage map,
-	// we start with some built in go-tea messages.
-	builtInMessages := MessageMap{
-		"CHANGE_ROUTE": changeRoute,
-	}
-
+func NewApp(config AppConfig, model State, msgMaps ...MessageMap) *Application {
 	app := Application{
 		Config:   config,
-		NewState: stateInitialiser,
+		Model:    model,
 		Sessions: SessionStore{},
 		// Combine the built-in messages with the application level messages
-		Messages:  mergeMaps(builtInMessages, msgMaps...),
+		Messages:  mergeMaps(msgMaps...),
 		Templates: parseTemplates(),
 	}
 
@@ -357,17 +361,13 @@ func (app *Application) initRouter() {
 }
 
 func (app Application) newState(path string) State {
-	state := app.NewState()
+	state := app.Model.InitState()
 	state.SetRoute(path)
 	return state
 }
 
 // Start creates the router, and serves it!
 func (app *Application) Start() {
-	if app.NewState == nil {
-		log.Fatalln("ERROR: No session state seeder function specificied.  Exiting...")
-	}
-
 	fmt.Printf("Starting application server on %v\n", app.Config.Port)
 	http.ListenAndServe(fmt.Sprintf(":%v", app.Config.Port), app.Router)
 }

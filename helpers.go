@@ -1,6 +1,8 @@
 package gotea
 
-func mergeMaps(startMap MessageMap, msgMaps ...MessageMap) MessageMap {
+func mergeMaps(msgMaps ...MessageMap) MessageMap {
+	startMap := MessageMap{}
+
 	for _, thisMap := range msgMaps {
 		for k, v := range thisMap {
 			startMap[k] = v

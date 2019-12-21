@@ -15,7 +15,7 @@ type Model struct {
 	Form         Form
 }
 
-func initModel() gotea.State {
+func (m Model) InitState() gotea.State {
 	return Model{
 		Router: &gotea.Router{},
 		MemoryGame: MemoryGame{
@@ -35,7 +35,7 @@ func initModel() gotea.State {
 func main() {
 	app := gotea.NewApp(
 		gotea.DefaultAppConfig,
-		initModel,
+		Model{},
 		memoryGameMessages,
 		formMessages,
 		nameSelector.UniqueMsgMap(nameSelectorMessages),
