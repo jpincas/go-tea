@@ -235,8 +235,22 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 // OK, that's pretty much it.
 // All that's left now is to bring all this together and start the server
 
+type AppConfig struct {
+	Port            int
+	HomeTemplate    string
+	StaticDirectory string
+}
+
+var DefaultAppConfig = AppConfig{
+	Port:            8080,
+	HomeTemplate:    "home",
+	StaticDirectory: "static",
+}
+
 // Application is the holder for all the bits and pieces go-tea needs
 type Application struct {
+	Config AppConfig
+
 	// MessageMap is the global map of messages -> message handling functions
 	Messages MessageMap
 
@@ -246,10 +260,9 @@ type Application struct {
 	// Templates for rending, provided by the appication
 	Templates *jet.Set
 
-	HomeTemplate    string
-	NewState        func() State
-	Port            int
-	StaticDirectory string
+	Router *chi.Mux
+
+	NewState func() State
 }
 
 // render is the main render function for the whole app
@@ -277,7 +290,7 @@ func (app Application) renderError(w io.Writer, state State, errorToRender error
 }
 
 func (app Application) render(w io.Writer, state State) {
-	templateName := state.RouteTemplate(app.HomeTemplate)
+	templateName := state.RouteTemplate(app.Config.HomeTemplate)
 
 	t, err := app.Templates.GetTemplate(templateName)
 	if err != nil {
@@ -295,23 +308,50 @@ func (app Application) render(w io.Writer, state State) {
 // And finally you are ready to start gotea.
 
 // NewApp is used by the calling application to set up a new gotea app
-func NewApp(stateInitialiser func() State, msgMaps ...MessageMap) *Application {
+func NewApp(config AppConfig, stateInitialiser func() State, msgMaps ...MessageMap) *Application {
 	// Rather than starting with a completely blank maessage map,
 	// we start with some built in go-tea messages.
 	builtInMessages := MessageMap{
 		"CHANGE_ROUTE": changeRoute,
 	}
 
-	return &Application{
+	app := Application{
+		Config:   config,
 		NewState: stateInitialiser,
 		Sessions: SessionStore{},
 		// Combine the built-in messages with the application level messages
-		Messages:        mergeMaps(builtInMessages, msgMaps...),
-		Templates:       parseTemplates(),
-		Port:            8080,
-		StaticDirectory: "static",
-		HomeTemplate:    "home",
+		Messages:  mergeMaps(builtInMessages, msgMaps...),
+		Templates: parseTemplates(),
 	}
+
+	app.initRouter()
+	return &app
+}
+
+func (app *Application) initRouter() {
+	router := chi.NewRouter()
+
+	// Attach the w ebsocket handler at /server,
+	router.Get("/server", app.websocketHandler)
+
+	// Serve the gotea JS
+	router.Get("/gotea.js", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/javascript")
+		w.Write([]byte(goteaJS))
+	})
+
+	// Attach the static file server if required
+	if app.Config.StaticDirectory != "" {
+		fileServer(router, "/static", http.Dir(app.Config.StaticDirectory))
+	}
+
+	// For all other routes, serve index.html
+	router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+		state := app.newState(r.URL.Path)
+		app.render(w, state)
+	})
+
+	app.Router = router
 }
 
 func (app Application) newState(path string) State {
@@ -326,24 +366,8 @@ func (app *Application) Start() {
 		log.Fatalln("ERROR: No session state seeder function specificied.  Exiting...")
 	}
 
-	router := chi.NewRouter()
-
-	// Attach the websocket handler at /server,
-	// wrapping it with the app context middleware established above
-	router.Get("/server", app.websocketHandler)
-
-	// Attach the static file serer at /dist
-	fileServer(router, "/static", http.Dir(app.StaticDirectory))
-
-	// For all other routes, serve index.html
-	router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
-		state := app.newState(r.URL.Path)
-		app.render(w, state)
-	})
-
-	// Start the app
-	fmt.Printf("Starting application server on %v", app.Port)
-	http.ListenAndServe(fmt.Sprintf(":%v", app.Port), router)
+	fmt.Printf("Starting application server on %v\n", app.Config.Port)
+	http.ListenAndServe(fmt.Sprintf(":%v", app.Config.Port), app.Router)
 }
 
 // That's all the important stuff.

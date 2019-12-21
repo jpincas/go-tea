@@ -34,6 +34,7 @@ func initModel() gotea.State {
 
 func main() {
 	app := gotea.NewApp(
+		gotea.DefaultAppConfig,
 		initModel,
 		memoryGameMessages,
 		formMessages,
