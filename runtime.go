@@ -12,6 +12,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+//go:generate hardcode
+
 // The idea behind gotea is simple, but can take a bit of getting your head around.
 // The code is structured more like a story than regular code -
 // read along from top to bottom to understand how it works
