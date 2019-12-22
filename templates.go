@@ -7,8 +7,8 @@ import (
 	"github.com/CloudyKit/jet"
 )
 
-func parseTemplates() *jet.Set {
-	viewSet := jet.NewHTMLSet("./templates")
+func parseTemplates(dir string) *jet.Set {
+	viewSet := jet.NewHTMLSet(dir)
 	addHelperFunctions(viewSet)
 	return viewSet
 }

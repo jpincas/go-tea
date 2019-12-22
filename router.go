@@ -53,7 +53,9 @@ func (r Router) GetRoute() string {
 // It replaces all intermediate slashes with an underscore, so
 // /baseroute/subroute -> baseroute_subroute.html
 func (r Router) RouteTemplate(homeTemplate string) string {
-	routeTemplate := strings.Replace(r.GetRoute(), "/", "_", -1)
+	currentRoute := r.GetRoute()
+	routeTemplate := strings.Replace(currentRoute, "/", "_", -1)
+
 	if routeTemplate == "" {
 		return homeTemplate
 	}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/CloudyKit/jet"
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	"github.com/gorilla/websocket"
 )
 
@@ -266,15 +267,16 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 // All that's left now is to bring all this together and start the server
 
 type AppConfig struct {
-	Port            int
-	HomeTemplate    string
-	StaticDirectory string
+	Port                                int
+	HomeTemplate                        string
+	TemplatesDirectory, StaticDirectory string
 }
 
 var DefaultAppConfig = AppConfig{
-	Port:            8080,
-	HomeTemplate:    "home",
-	StaticDirectory: "static",
+	Port:               8080,
+	HomeTemplate:       "home",
+	TemplatesDirectory: "templates",
+	StaticDirectory:    "static",
 }
 
 // Application is the holder for all the bits and pieces go-tea needs
@@ -338,41 +340,47 @@ func (app Application) render(w io.Writer, state State) {
 // And finally you are ready to start gotea.
 
 // NewApp is used by the calling application to set up a new gotea app
-func NewApp(config AppConfig, model State, msgMaps ...MessageMap) *Application {
+func NewApp(config AppConfig, model State, router *chi.Mux, msgMaps ...MessageMap) *Application {
 	app := Application{
 		Config:   config,
 		Model:    model,
 		Sessions: SessionStore{},
 		// Combine the built-in messages with the application level messages
 		Messages:  mergeMaps(msgMaps...),
-		Templates: parseTemplates(),
+		Templates: parseTemplates(config.TemplatesDirectory),
 	}
 
-	app.initRouter()
+	// If user has not passed in a preexisting router, use a new one
+	if router == nil {
+		router = chi.NewRouter()
+		router.Use(middleware.Logger)
+	}
+
+	app.initRouter(router)
 	return &app
 }
 
-func (app *Application) initRouter() {
-	router := chi.NewRouter()
+func (app *Application) initRouter(router *chi.Mux) {
+	router.Route("/", func(router chi.Router) {
+		// Attach the w ebsocket handler at /server,
+		router.Get("/server", app.websocketHandler)
 
-	// Attach the w ebsocket handler at /server,
-	router.Get("/server", app.websocketHandler)
+		// Serve the gotea JS
+		router.Get("/gotea.js", func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "application/javascript")
+			w.Write([]byte(goteaJS))
+		})
 
-	// Serve the gotea JS
-	router.Get("/gotea.js", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/javascript")
-		w.Write([]byte(goteaJS))
-	})
+		// Attach the static file server if required
+		if app.Config.StaticDirectory != "" {
+			fileServer(router, "/static", http.Dir(app.Config.StaticDirectory))
+		}
 
-	// Attach the static file server if required
-	if app.Config.StaticDirectory != "" {
-		fileServer(router, "/static", http.Dir(app.Config.StaticDirectory))
-	}
-
-	// For all other routes, serve index.html
-	router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
-		state := app.newState(r.URL.Path)
-		app.render(w, state)
+		// For all other routes, serve index.html
+		router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+			state := app.newState(r.URL.Path)
+			app.render(w, state)
+		})
 	})
 
 	app.Router = router

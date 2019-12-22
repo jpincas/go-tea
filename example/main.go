@@ -36,6 +36,7 @@ func main() {
 	app := gotea.NewApp(
 		gotea.DefaultAppConfig,
 		Model{},
+		nil,
 		memoryGameMessages,
 		formMessages,
 		nameSelector.UniqueMsgMap(nameSelectorMessages),
