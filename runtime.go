@@ -28,7 +28,8 @@ import (
 // Conventionally, you'd call it 'Model', but you don't have to!
 // You get a router by embedding the go-tea Router in your model
 type State interface {
-	InitState() State
+	Init() State
+	Update() MessageMap
 	Routable
 }
 
@@ -268,13 +269,11 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 
 type AppConfig struct {
 	Port                                int
-	HomeTemplate                        string
 	TemplatesDirectory, StaticDirectory string
 }
 
 var DefaultAppConfig = AppConfig{
 	Port:               8080,
-	HomeTemplate:       "home",
 	TemplatesDirectory: "templates",
 	StaticDirectory:    "static",
 }
@@ -282,9 +281,6 @@ var DefaultAppConfig = AppConfig{
 // Application is the holder for all the bits and pieces go-tea needs
 type Application struct {
 	Config AppConfig
-
-	// MessageMap is the global map of messages -> message handling functions
-	Messages MessageMap
 
 	// Sessions is a list of the current active sessions
 	Sessions SessionStore
@@ -295,13 +291,12 @@ type Application struct {
 	Router *chi.Mux
 
 	Model State
+
+	Messages MessageMap
 }
 
 // render is the main render function for the whole app
 // It specifies how to render state.
-// It will look for a template whose name matches the route, e.g.
-// /myroute -> myroute.html
-// /myroute/subroute -> myroute_subroute.html
 
 func write(w io.Writer, t *jet.Template, state State, vars jet.VarMap) error {
 	return t.Execute(w, vars, state)
@@ -322,9 +317,7 @@ func (app Application) renderError(w io.Writer, state State, errorToRender error
 }
 
 func (app Application) render(w io.Writer, state State) {
-	templateName := state.RouteTemplate(app.Config.HomeTemplate)
-
-	t, err := app.Templates.GetTemplate(templateName)
+	t, err := app.Templates.GetTemplate(state.RouteTemplate())
 	if err != nil {
 		app.renderError(w, state, err)
 		return
@@ -340,13 +333,12 @@ func (app Application) render(w io.Writer, state State) {
 // And finally you are ready to start gotea.
 
 // NewApp is used by the calling application to set up a new gotea app
-func NewApp(config AppConfig, model State, router *chi.Mux, msgMaps ...MessageMap) *Application {
+func NewApp(config AppConfig, model State, router *chi.Mux) *Application {
 	app := Application{
-		Config:   config,
-		Model:    model,
-		Sessions: SessionStore{},
-		// Combine the built-in messages with the application level messages
-		Messages:  mergeMaps(msgMaps...),
+		Config:    config,
+		Model:     model,
+		Messages:  model.Update(),
+		Sessions:  SessionStore{},
 		Templates: parseTemplates(config.TemplatesDirectory),
 	}
 
@@ -387,7 +379,7 @@ func (app *Application) initRouter(router *chi.Mux) {
 }
 
 func (app Application) newState(path string) State {
-	state := app.Model.InitState()
+	state := app.Model.Init()
 	state.SetRoute(path)
 	return state
 }

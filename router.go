@@ -9,7 +9,7 @@ import (
 type Routable interface {
 	SetRoute(string)
 	GetRoute() string
-	RouteTemplate(string) string
+	RouteTemplate() string
 	RouteParam(string) string
 	FireUpdateHook(State) State
 }
@@ -47,20 +47,6 @@ func (r Router) GetRoute() string {
 	}
 
 	return s
-}
-
-// RouteTemplate is a helper for associating a template file to a route
-// It replaces all intermediate slashes with an underscore, so
-// /baseroute/subroute -> baseroute_subroute.html
-func (r Router) RouteTemplate(homeTemplate string) string {
-	currentRoute := r.GetRoute()
-	routeTemplate := strings.Replace(currentRoute, "/", "_", -1)
-
-	if routeTemplate == "" {
-		return homeTemplate
-	}
-
-	return routeTemplate
 }
 
 func (r Router) RouteParam(param string) string {

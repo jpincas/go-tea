@@ -2,22 +2,23 @@ package main
 
 import (
 	"encoding/json"
+	"strings"
 
-	gotea "github.com/jpincas/go-tea"
+	gt "github.com/jpincas/go-tea"
 	"github.com/jpincas/go-tea/example/tagselector"
 )
 
 type Model struct {
-	*gotea.Router
+	*gt.Router
 	MemoryGame   MemoryGame
 	NameSelector tagselector.Model
 	TeamSelector tagselector.Model
 	Form         Form
 }
 
-func (m Model) InitState() gotea.State {
+func (m Model) Init() gt.State {
 	return Model{
-		Router: &gotea.Router{},
+		Router: &gt.Router{},
 		MemoryGame: MemoryGame{
 			Deck:              NewDeck(4),
 			TurnsTaken:        0,
@@ -32,15 +33,31 @@ func (m Model) InitState() gotea.State {
 	}
 }
 
-func main() {
-	app := gotea.NewApp(
-		gotea.DefaultAppConfig,
-		Model{},
-		nil,
+func (m Model) Update() gt.MessageMap {
+	return gt.MergeMaps(
 		memoryGameMessages,
 		formMessages,
 		nameSelector.UniqueMsgMap(nameSelectorMessages),
 		teamSelector.UniqueMsgMap(teamSelectorMessages),
+	)
+}
+
+func (m Model) RouteTemplate() string {
+	currentRoute := m.GetRoute()
+	routeTemplate := strings.Replace(currentRoute, "/", "_", -1)
+
+	if routeTemplate == "" {
+		return "home"
+	}
+
+	return routeTemplate
+}
+
+func main() {
+	app := gt.NewApp(
+		gt.DefaultAppConfig,
+		Model{},
+		nil,
 	)
 
 	app.Templates.AddGlobal("prettyPrint", func(s interface{}) string {

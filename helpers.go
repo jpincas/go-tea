@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func mergeMaps(msgMaps ...MessageMap) MessageMap {
+func MergeMaps(msgMaps ...MessageMap) MessageMap {
 	startMap := MessageMap{}
 
 	for _, thisMap := range msgMaps {
