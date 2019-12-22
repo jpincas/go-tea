@@ -2,60 +2,34 @@ package gotea
 
 import (
 	"encoding/json"
+	"net/http"
 	"net/url"
 	"strings"
 )
 
 type Routable interface {
 	SetRoute(string)
-	GetRoute() string
-	RouteTemplate() string
 	RouteParam(string) string
-	FireUpdateHook(State) State
+	RouteTemplate() string
+	RouteUpdateHook() State
+	SetOriginalRequest(*http.Request)
 }
 
 type Router struct {
-	Route      string
-	UpdateHook func(State) State
-}
-
-func (r Router) FireUpdateHook(s State) State {
-	if r.UpdateHook != nil {
-		return r.UpdateHook(s)
-	}
-
-	return s
+	Route           string
+	OriginalRequest *http.Request
 }
 
 var routingMessages = MessageMap{
 	"CHANGE_ROUTE": changeRoute,
 }
 
+func (r *Router) SetOriginalRequest(request *http.Request) {
+	r.OriginalRequest = request
+}
+
 func (r *Router) SetRoute(newRoute string) {
 	r.Route = newRoute
-}
-
-func (r Router) GetRoute() string {
-
-	// Trim any / at the start/end
-	s := strings.Trim(r.Route, "/")
-
-	// Remove any params
-	paramsStart := strings.Index(s, "?")
-	if paramsStart != -1 {
-		s = s[0:paramsStart]
-	}
-
-	return s
-}
-
-func (r Router) RouteParam(param string) string {
-	rel, err := url.Parse(r.Route)
-	if err != nil {
-		return ""
-	}
-
-	return rel.Query().Get(param)
 }
 
 func changeRoute(args json.RawMessage, s State) Response {
@@ -70,5 +44,28 @@ func changeRoute(args json.RawMessage, s State) Response {
 	// Before returning, fire the route update hook.
 	// This is provided by the application and can implement any
 	// custom logic required
-	return Respond(s.FireUpdateHook(s))
+	return Respond(s.RouteUpdateHook())
+}
+
+//  Route Helpers
+func (r Router) RouteParam(param string) string {
+	rel, err := url.Parse(r.Route)
+	if err != nil {
+		return ""
+	}
+
+	return rel.Query().Get(param)
+}
+
+func (r Router) GetRoute() string {
+	// Trim any / at the start/end
+	s := strings.Trim(r.Route, "/")
+
+	// Remove any params
+	paramsStart := strings.Index(s, "?")
+	if paramsStart != -1 {
+		s = s[0:paramsStart]
+	}
+
+	return s
 }

@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/http"
 	"strings"
 
 	gt "github.com/jpincas/go-tea"
@@ -16,7 +18,7 @@ type Model struct {
 	Form         Form
 }
 
-func (m Model) Init() gt.State {
+func (m Model) Init(_ *http.Request) gt.State {
 	return Model{
 		Router: &gt.Router{},
 		MemoryGame: MemoryGame{
@@ -51,6 +53,11 @@ func (m Model) RouteTemplate() string {
 	}
 
 	return routeTemplate
+}
+
+func (m Model) RouteUpdateHook() gt.State {
+	fmt.Println("Hey! Changing route here")
+	return m
 }
 
 func main() {

@@ -28,7 +28,7 @@ import (
 // Conventionally, you'd call it 'Model', but you don't have to!
 // You get a router by embedding the go-tea Router in your model
 type State interface {
-	Init() State
+	Init(r *http.Request) State
 	Update() MessageMap
 	Routable
 }
@@ -51,9 +51,11 @@ type SessionStore []*Session
 // sets the initial state by calling a special function that your application needs
 // to provide (more on that later),
 // adds the session to the session store so we can keep track of it.
-func (app *Application) newSession(conn *websocket.Conn, path string) (*Session, error) {
+func (app *Application) newSession(r *http.Request, conn *websocket.Conn, path string) (*Session, error) {
+	newState := app.newState(r, path)
+
 	session := Session{
-		State: app.newState(path),
+		State: newState,
 	}
 	session.Conn = conn
 	session.add(app)
@@ -237,7 +239,7 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 
 	// create a new session
 	// this will use the state seeder to create a default state
-	session, err := app.newSession(conn, startingRoute)
+	session, err := app.newSession(r, conn, startingRoute)
 	if err != nil {
 		session.render(app, err)
 	}
@@ -370,7 +372,7 @@ func (app *Application) initRouter(router *chi.Mux) {
 
 		// For all other routes, serve index.html
 		router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
-			state := app.newState(r.URL.Path)
+			state := app.newState(r, r.URL.Path)
 			app.render(w, state)
 		})
 	})
@@ -378,10 +380,11 @@ func (app *Application) initRouter(router *chi.Mux) {
 	app.Router = router
 }
 
-func (app Application) newState(path string) State {
-	state := app.Model.Init()
+func (app Application) newState(r *http.Request, path string) State {
+	state := app.Model.Init(r)
 	state.SetRoute(path)
-	return state
+	state.SetOriginalRequest(r)
+	return state.RouteUpdateHook()
 }
 
 // Start creates the router, and serves it!
