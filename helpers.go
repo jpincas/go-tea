@@ -1,6 +1,9 @@
 package gotea
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 func mergeMaps(msgMaps ...MessageMap) MessageMap {
 	startMap := MessageMap{}
@@ -14,13 +17,46 @@ func mergeMaps(msgMaps ...MessageMap) MessageMap {
 	return startMap
 }
 
-func WithNextMsg(state State, msg string, args json.RawMessage) (State, *Message, error) {
-	return state, &Message{
-		Message:   msg,
-		Arguments: args,
-	}, nil
+// Message Response Helpers
+
+func Respond(state State) Response {
+	return Response{
+		State:   state,
+		NextMsg: nil,
+		Delay:   0,
+		Error:   nil,
+	}
 }
 
-func WithNoMsg(state State) (State, *Message, error) {
-	return state, nil, nil
+func RespondWithError(state State, err error) Response {
+	return Response{
+		State:   state,
+		NextMsg: nil,
+		Delay:   0,
+		Error:   err,
+	}
+}
+
+func RespondWithNextMsg(state State, msg string, args json.RawMessage) Response {
+	return Response{
+		State: state,
+		NextMsg: &Message{
+			Message:   msg,
+			Arguments: args,
+		},
+		Delay: 0,
+		Error: nil,
+	}
+}
+
+func RespondWithDelayedNextMsg(state State, msg string, args json.RawMessage, delay time.Duration) Response {
+	return Response{
+		State: state,
+		NextMsg: &Message{
+			Message:   msg,
+			Arguments: args,
+		},
+		Delay: delay,
+		Error: nil,
+	}
 }

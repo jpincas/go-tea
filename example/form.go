@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 
-	gotea "github.com/jpincas/go-tea"
+	gt "github.com/jpincas/go-tea"
 )
 
 type Form struct {
@@ -18,16 +18,16 @@ type Form struct {
 	MultipleTextInput []string
 }
 
-var formMessages gotea.MessageMap = gotea.MessageMap{
+var formMessages gt.MessageMap = gt.MessageMap{
 	"FORM_UPDATE": formUpdate,
 }
 
-func formUpdate(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
+func formUpdate(args json.RawMessage, s gt.State) gt.Response {
 	state := s.(Model)
 
 	if err := json.Unmarshal(args, &state.Form); err != nil {
-		return state, nil, err
+		return gt.RespondWithError(state, err)
 	}
 
-	return state, nil, nil
+	return gt.Respond(state)
 }

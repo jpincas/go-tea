@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/CloudyKit/jet"
 	"github.com/go-chi/chi"
@@ -132,7 +133,15 @@ type Message struct {
 // They can optioally send back another 'Message' to the runtime,
 // which will be processed in turn,
 // effectively setting off a chain
-type MessageHandler func(json.RawMessage, State) (State, *Message, error)
+
+type Response struct {
+	State   State
+	NextMsg *Message
+	Delay   time.Duration
+	Error   error
+}
+
+type MessageHandler func(json.RawMessage, State) Response
 
 // Your application, then, will define a set of message handling functions
 // that will be called in response to incoming messages.
@@ -166,18 +175,23 @@ func (message Message) Process(session *Session, app *Application) error {
 		}
 	}
 
-	newState, nextMessage, err := funcToExecute(message.Arguments, session.State)
+	response := funcToExecute(message.Arguments, session.State)
 
-	if err != nil {
-		return err
+	if response.Error != nil {
+		return response.Error
 	}
 
-	session.State = newState
+	session.State = response.State
 	session.render(app, nil)
 
 	// TODO: new thread?
-	if nextMessage != nil {
-		nextMessage.Process(session, app)
+	if response.NextMsg != nil {
+
+		if response.Delay > 0 {
+			time.Sleep(response.Delay * time.Millisecond)
+		}
+
+		response.NextMsg.Process(session, app)
 	}
 
 	return nil

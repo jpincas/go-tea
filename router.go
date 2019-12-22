@@ -70,10 +70,10 @@ func (r Router) RouteParam(param string) string {
 	return rel.Query().Get(param)
 }
 
-func changeRoute(args json.RawMessage, s State) (State, *Message, error) {
+func changeRoute(args json.RawMessage, s State) Response {
 	var newRoute string
 	if err := json.Unmarshal(args, &newRoute); err != nil {
-		return s, nil, err
+		return RespondWithError(s, err)
 	}
 
 	// Set the new route on the router
@@ -82,5 +82,5 @@ func changeRoute(args json.RawMessage, s State) (State, *Message, error) {
 	// Before returning, fire the route update hook.
 	// This is provided by the application and can implement any
 	// custom logic required
-	return s.FireUpdateHook(s), nil, nil
+	return Respond(s.FireUpdateHook(s))
 }

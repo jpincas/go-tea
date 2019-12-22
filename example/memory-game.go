@@ -3,12 +3,11 @@ package main
 import (
 	"encoding/json"
 	"math/rand"
-	"time"
 
-	gotea "github.com/jpincas/go-tea"
+	gt "github.com/jpincas/go-tea"
 )
 
-var memoryGameMessages gotea.MessageMap = gotea.MessageMap{
+var memoryGameMessages gt.MessageMap = gt.MessageMap{
 	"FLIP_CARD":      FlipCard,
 	"REMOVE_MATCHES": RemoveMatches,
 	"FLIP_ALL_BACK":  FlipAllBack,
@@ -53,13 +52,13 @@ type Card struct {
 	Matched bool
 }
 
-func FlipCard(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
+func FlipCard(args json.RawMessage, s gt.State) gt.Response {
 	state := s.(Model)
 
 	// cast the argument to int - comes back from JS as float64
 	var cardToFlip int
 	if err := json.Unmarshal(args, &cardToFlip); err != nil {
-		return state, nil, err
+		return gt.RespondWithError(state, err)
 	}
 
 	state.MemoryGame.Deck.flipCard(cardToFlip)
@@ -69,31 +68,31 @@ func FlipCard(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message,
 
 		if state.MemoryGame.Deck.hasFoundMatch() {
 			state.MemoryGame.incrementScore()
-			return gotea.WithNextMsg(state, "REMOVE_MATCHES", nil)
+			return gt.RespondWithDelayedNextMsg(state, "REMOVE_MATCHES", nil, 1000)
 		}
 
-		return gotea.WithNextMsg(state, "FLIP_ALL_BACK", nil)
+		return gt.RespondWithDelayedNextMsg(state, "FLIP_ALL_BACK", nil, 1000)
 	}
 
-	return gotea.WithNoMsg(state)
+	return gt.Respond(state)
 }
 
-func RestartGame(_ json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
+func RestartGame(_ json.RawMessage, s gt.State) gt.Response {
 	state := s.(Model)
 	state.MemoryGame.Deck.reset()
 	state.MemoryGame.resetScores()
-	return gotea.WithNoMsg(state)
+	return gt.Respond(state)
 }
 
-func FlipAllBack(_ json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
-	time.Sleep(500 * time.Millisecond)
+func FlipAllBack(_ json.RawMessage, s gt.State) gt.Response {
+	// time.Sleep(500 * time.Millisecond)
 	state := s.(Model)
 	state.MemoryGame.Deck.flipAllBack()
-	return gotea.WithNoMsg(state)
+	return gt.Respond(state)
 }
 
-func RemoveMatches(_ json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
-	time.Sleep(500 * time.Millisecond)
+func RemoveMatches(_ json.RawMessage, s gt.State) gt.Response {
+	// time.Sleep(500 * time.Millisecond)
 	state := s.(Model)
 	state.MemoryGame.Deck.removeMatches()
 
@@ -103,7 +102,7 @@ func RemoveMatches(_ json.RawMessage, s gotea.State) (gotea.State, *gotea.Messag
 		}
 	}
 
-	return gotea.WithNoMsg(state)
+	return gt.Respond(state)
 }
 
 func NewDeck(n int) (deck Deck) {

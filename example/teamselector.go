@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 
-	gotea "github.com/jpincas/go-tea"
+	gt "github.com/jpincas/go-tea"
 	"github.com/jpincas/go-tea/example/tagselector"
 )
 
@@ -13,44 +13,44 @@ var teamSelector = tagselector.Model{
 	NoMatchMessage: "No teams start with those letters. Start again!",
 }
 
-var teamSelectorMessages = map[string]gotea.MessageHandler{
+var teamSelectorMessages = map[string]gt.MessageHandler{
 	tagselector.MsgSelectTag:         teamSelectorSelectTag,
 	tagselector.MsgSearchInputUpdate: teamSelectorSearchInputUpdate,
 	tagselector.MsgRemoveTag:         teamSelectorRemoveTag,
 }
 
-func teamSelectorSelectTag(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
+func teamSelectorSelectTag(args json.RawMessage, s gt.State) gt.Response {
 	state := s.(Model)
 
 	var tag string
 	if err := json.Unmarshal(args, &tag); err != nil {
-		return state, nil, err
+		return gt.RespondWithError(state, err)
 	}
 
 	state.TeamSelector.SelectTag(tag)
-	return state, nil, nil
+	return gt.Respond(state)
 }
 
-func teamSelectorSearchInputUpdate(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
+func teamSelectorSearchInputUpdate(args json.RawMessage, s gt.State) gt.Response {
 	state := s.(Model)
 
 	var input string
 	if err := json.Unmarshal(args, &input); err != nil {
-		return state, nil, err
+		return gt.RespondWithError(state, err)
 	}
 
 	state.TeamSelector.SuggestTags(input)
-	return state, nil, nil
+	return gt.Respond(state)
 }
 
-func teamSelectorRemoveTag(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
+func teamSelectorRemoveTag(args json.RawMessage, s gt.State) gt.Response {
 	state := s.(Model)
 
 	var tag string
 	if err := json.Unmarshal(args, &tag); err != nil {
-		return state, nil, err
+		return gt.RespondWithError(state, err)
 	}
 
 	state.TeamSelector.RemoveTag(tag)
-	return state, nil, nil
+	return gt.Respond(state)
 }
