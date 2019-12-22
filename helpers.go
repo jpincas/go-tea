@@ -1,5 +1,7 @@
 package gotea
 
+import "encoding/json"
+
 func mergeMaps(msgMaps ...MessageMap) MessageMap {
 	startMap := MessageMap{}
 
@@ -10,4 +12,15 @@ func mergeMaps(msgMaps ...MessageMap) MessageMap {
 	}
 
 	return startMap
+}
+
+func WithNextMsg(state State, msg string, args json.RawMessage) (State, *Message, error) {
+	return state, &Message{
+		Message:   msg,
+		Arguments: args,
+	}, nil
+}
+
+func WithNoMsg(state State) (State, *Message, error) {
+	return state, nil, nil
 }

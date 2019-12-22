@@ -62,41 +62,34 @@ func FlipCard(args json.RawMessage, s gotea.State) (gotea.State, *gotea.Message,
 		return state, nil, err
 	}
 
-	state.MemoryGame.Deck.flipCard(int(cardToFlip))
+	state.MemoryGame.Deck.flipCard(cardToFlip)
 
 	if state.MemoryGame.Deck.numberFlippedCards() == 2 {
 		state.MemoryGame.takeTurn()
 
 		if state.MemoryGame.Deck.hasFoundMatch() {
 			state.MemoryGame.incrementScore()
-
-			return state, &gotea.Message{
-				Message:   "REMOVE_MATCHES",
-				Arguments: nil,
-			}, nil
+			return gotea.WithNextMsg(state, "REMOVE_MATCHES", nil)
 		}
 
-		return state, &gotea.Message{
-			Message:   "FLIP_ALL_BACK",
-			Arguments: nil,
-		}, nil
+		return gotea.WithNextMsg(state, "FLIP_ALL_BACK", nil)
 	}
 
-	return state, nil, nil
+	return gotea.WithNoMsg(state)
 }
 
 func RestartGame(_ json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
 	state := s.(Model)
 	state.MemoryGame.Deck.reset()
 	state.MemoryGame.resetScores()
-	return state, nil, nil
+	return gotea.WithNoMsg(state)
 }
 
 func FlipAllBack(_ json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
 	time.Sleep(500 * time.Millisecond)
 	state := s.(Model)
 	state.MemoryGame.Deck.flipAllBack()
-	return state, nil, nil
+	return gotea.WithNoMsg(state)
 }
 
 func RemoveMatches(_ json.RawMessage, s gotea.State) (gotea.State, *gotea.Message, error) {
@@ -110,7 +103,7 @@ func RemoveMatches(_ json.RawMessage, s gotea.State) (gotea.State, *gotea.Messag
 		}
 	}
 
-	return state, nil, nil
+	return gotea.WithNoMsg(state)
 }
 
 func NewDeck(n int) (deck Deck) {

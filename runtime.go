@@ -154,6 +154,10 @@ func (message Message) Process(session *Session, app *Application) error {
 	// At the moment, just the router, but could expand
 	systemMessages := routingMessages
 	funcToExecute, found := systemMessages[message.Message]
+
+	// TODO: We might want to check both maps here and raise
+	// some sort of log message if there is a clash of names
+
 	if !found {
 		// Care to overwrite the funcToExecute variable above
 		funcToExecute, found = app.Messages[message.Message]
