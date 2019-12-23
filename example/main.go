@@ -56,7 +56,7 @@ func (m Model) RouteTemplate() string {
 }
 
 func (m Model) RouteUpdateHook() gt.State {
-	fmt.Println("Hey! Changing route here")
+	fmt.Println("Example app to world: changing route now!")
 	return m
 }
 

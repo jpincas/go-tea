@@ -38,9 +38,6 @@ type State interface {
 	// SetOriginal request records the original http request on the state for later use if required
 	SetOriginalRequest(*http.Request)
 
-	// Warn closing is set just before a session is closed
-	WarnClosing()
-
 	// Routable provides all the routing functions
 	Routable
 }
@@ -49,12 +46,6 @@ type State interface {
 type BaseModel struct {
 	Router
 	OriginalRequest *http.Request
-	Closing         bool
-}
-
-// WarnClosing sets a flag on the state to indicate that the session is about to close
-func (b *BaseModel) WarnClosing() {
-	b.Closing = true
 }
 
 // SetOriginalRequest records the original http request on the model
@@ -99,6 +90,8 @@ func (session *Session) add(app *Application) {
 // close does the work of closing a session, including recording on the model that it is about to close,
 // actually closing the connection, and removing it from the list.
 func (session *Session) close(app *Application) {
+	defer session.Conn.Close()
+
 	log.Println("Closing session")
 
 	// remove, as you could expect, just removes the session from the session store.
@@ -119,6 +112,12 @@ func (session *Session) close(app *Application) {
 // The JS part of gotea takes this HTML and patches it efficiently onto
 // the existing DOM, so the browser only updates what has actually changed
 func (session *Session) render(app *Application, errorToRender error) {
+	// There is no point trying to render a seesion if the message is CLOSE
+	// because logically it will fail
+	if websocket.IsCloseError(errorToRender, websocket.CloseGoingAway) {
+		return
+	}
+
 	if session.Conn == nil {
 		log.Println("Could not render, no socket to render to")
 		return
@@ -214,12 +213,6 @@ func (message Message) Process(session *Session, app *Application) error {
 	return nil
 }
 
-// upgrader prepares the upgrader for websocket connections
-var upgrader = websocket.Upgrader{
-	// TODO: this needs to be configured
-	CheckOrigin: func(r *http.Request) bool { return true },
-}
-
 // websocketHandler is the handler function called when a client connects.
 // It is basically the core of the runtime.  Here's what it does:
 // - upgrades the connection to a websocket
@@ -229,9 +222,13 @@ var upgrader = websocket.Upgrader{
 // - waits again
 func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request) {
 	// upgrade the connections
+	upgrader := websocket.Upgrader{
+		CheckOrigin: app.Config.CheckOrigin,
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Print("upgrade:", err)
+		log.Print("error upgrading connection:", err)
 		return
 	}
 
@@ -250,15 +247,13 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 	session.render(app, err)
 
 	// defer closing the connection and removing it from the session
-	defer session.Conn.Close()
 	defer session.close(app)
 
 	// the main runtime loop
 	for {
 		// read the incoming message
 		var message Message
-		err := conn.ReadJSON(&message)
-		if err != nil {
+		if err := conn.ReadJSON(&message); err != nil {
 			session.render(app, err)
 			break
 		}
@@ -267,7 +262,6 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 		if err := message.Process(session, app); err != nil {
 			session.render(app, err)
 		}
-
 	}
 }
 
@@ -277,12 +271,14 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 type AppConfig struct {
 	Port                                int
 	TemplatesDirectory, StaticDirectory string
+	CheckOrigin                         func(r *http.Request) bool
 }
 
 var DefaultAppConfig = AppConfig{
 	Port:               8080,
 	TemplatesDirectory: "templates",
 	StaticDirectory:    "static",
+	CheckOrigin:        func(_ *http.Request) bool { return true },
 }
 
 // Application is the holder for all the bits and pieces go-tea needs
