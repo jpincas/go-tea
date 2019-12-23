@@ -31,13 +31,19 @@
                 <a href="/routing">Routing</a>
             </li>
             <li>
-                Current Route: {{ .Router.Route }}
+                Current Route: {{ .BaseModel.Router.Route }}
             </li>
         </ul>
     </div>
 
     <div id="view">
         {{yield body()}}
+    </div>
+
+    <div id="gotea">
+        {{ if .BaseModel.Closing }}
+        <h1>Closing</h1>
+        {{ end }}
     </div>
     <script src="/gotea.js"></script>
 </body>

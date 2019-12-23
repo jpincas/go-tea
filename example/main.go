@@ -11,7 +11,7 @@ import (
 )
 
 type Model struct {
-	*gt.Router
+	*gt.BaseModel
 	MemoryGame   MemoryGame
 	NameSelector tagselector.Model
 	TeamSelector tagselector.Model
@@ -20,7 +20,7 @@ type Model struct {
 
 func (m Model) Init(_ *http.Request) gt.State {
 	return Model{
-		Router: &gt.Router{},
+		BaseModel: &gt.BaseModel{},
 		MemoryGame: MemoryGame{
 			Deck:              NewDeck(4),
 			TurnsTaken:        0,

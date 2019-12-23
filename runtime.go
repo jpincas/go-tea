@@ -16,21 +16,50 @@ import (
 
 //go:generate hardcode
 
-// The idea behind gotea is simple, but can take a bit of getting your head around.
-// The code is structured more like a story than regular code -
-// read along from top to bottom to understand how it works
-
 // The concepts of 'State' and 'Session' are fundamental to gotea.
 
-// State is private to each user (session) and is what is rendered
-// by the runtime on each update.
-// It can essentially be anything  - you define it as a struct in your application code.
-// Conventionally, you'd call it 'Model', but you don't have to!
-// You get a router by embedding the go-tea Router in your model
+// State is private to each user (session) and is what is rendered by the runtime on each update.
+// It can essentially be anything  - you just define it as a struct in your application code.
+// By Elm convention it would be called 'Model', but that's up to you.
 type State interface {
+	// USER DEFINED METHODS
+
+	// Init must be defined by the user and describes the 'blank' state from which a session starts.
+	// It gets passed a pointer to the original http request which might help to set some starting parameters,
+	// but can most often be ignored
 	Init(r *http.Request) State
+
+	// Update is defined by the user and defines the MessageMap that is used to modify state.
+	// on each loop of the runtime
 	Update() MessageMap
+
+	// PROVIDED METHODS
+
+	// SetOriginal request records the original http request on the state for later use if required
+	SetOriginalRequest(*http.Request)
+
+	// Warn closing is set just before a session is closed
+	WarnClosing()
+
+	// Routable provides all the routing functions
 	Routable
+}
+
+// BaseModel should be embedded in the client model
+type BaseModel struct {
+	Router
+	OriginalRequest *http.Request
+	Closing         bool
+}
+
+// WarnClosing sets a flag on the state to indicate that the session is about to close
+func (b *BaseModel) WarnClosing() {
+	b.Closing = true
+}
+
+// SetOriginalRequest records the original http request on the model
+func (b *BaseModel) SetOriginalRequest(request *http.Request) {
+	b.OriginalRequest = request
 }
 
 // Session is just a holder for a websocket connection (or more accurately, a pointer to one),
@@ -42,16 +71,15 @@ type Session struct {
 }
 
 // SessionStore tracks a list of active sessions.  When a session is opened,
-// it gets added to the SessionStore.
-// When a session is closed, it gets removed.
+// it gets added to the SessionStore. When a session is closed, it gets removed.
 type SessionStore []*Session
 
 // newSession creates a new session, as outlined above.
 // It assigns the specified websocket connection to the session,
 // sets the initial state by calling a special function that your application needs
 // to provide (more on that later),
-// adds the session to the session store so we can keep track of it.
-func (app *Application) newSession(r *http.Request, conn *websocket.Conn, path string) (*Session, error) {
+// and adds the session to the session store so we can keep track of it.
+func (app *Application) newSession(r *http.Request, conn *websocket.Conn, path string) *Session {
 	newState := app.newState(r, path)
 
 	session := Session{
@@ -60,16 +88,20 @@ func (app *Application) newSession(r *http.Request, conn *websocket.Conn, path s
 	session.Conn = conn
 	session.add(app)
 
-	return &session, nil
+	return &session
 }
 
-// add simply updates the list of active sessions, as explained above.
+// add updates the list of active sessions
 func (session *Session) add(app *Application) {
 	app.Sessions = append(app.Sessions, session)
 }
 
-// remove, as you could expect, just removes the session from the session store.
-func (session *Session) remove(app *Application) {
+// close does the work of closing a session, including recording on the model that it is about to close,
+// actually closing the connection, and removing it from the list.
+func (session *Session) close(app *Application) {
+	log.Println("Closing session")
+
+	// remove, as you could expect, just removes the session from the session store.
 	for i, stored := range app.Sessions {
 		if stored == session {
 			// safe delete NOT preserving order
@@ -81,8 +113,6 @@ func (session *Session) remove(app *Application) {
 	}
 }
 
-// Here's where the magic starts to happen
-
 // render takes the session state, runs it through the main view template
 // and renders it to the socket connection on the session -
 // this is what the client sees in their browser.
@@ -90,7 +120,6 @@ func (session *Session) remove(app *Application) {
 // the existing DOM, so the browser only updates what has actually changed
 func (session *Session) render(app *Application, errorToRender error) {
 	if session.Conn == nil {
-		// Oops! There's no socket connection
 		log.Println("Could not render, no socket to render to")
 		return
 	}
@@ -114,10 +143,6 @@ func (session *Session) render(app *Application, errorToRender error) {
 	}
 }
 
-// But on its own, the above would be quite boring,
-// it wouldn't allow for any interactivity.
-// Fortunately, interactivity is baked right into the gotea runime with 'Messages'
-
 // Message is a data structure that is triggered in JS in the browser,
 // and send through the open websocket connection to the gotea runtime.
 // It's quite simple and consists of just two pieces of information:
@@ -128,16 +153,9 @@ type Message struct {
 	Arguments json.RawMessage `json:"args"`
 }
 
-// gotea is all about state.
-// Messages arriving at the runtime are handled by
-
-// MessageHandler functions which can do absolutely anything
-// as long as they return a new state.
-// Typically they would be used to make some sort of mutation.
-// They can optioally send back another 'Message' to the runtime,
-// which will be processed in turn,
-// effectively setting off a chain
-
+// Response is returned by MessageHandler functions.  The most important part of the
+// response is the new state, but they can optionally return another message to be
+// processed (after an optional delay)
 type Response struct {
 	State   State
 	NextMsg *Message
@@ -145,18 +163,17 @@ type Response struct {
 	Error   error
 }
 
+// MessageHandler functions can do absolutely anything as long as they return a new state.
+// Typically they would be used to make some sort of mutation to the state.
 type MessageHandler func(json.RawMessage, State) Response
-
-// Your application, then, will define a set of message handling functions
-// that will be called in response to incoming messages.
 
 // MessageMap holds a record of MessageHandler functions keyed against message.
 // This enables the runtime to look up the correct function to execute for each message received.
+// The client application must provide this when bootstrapping the app.
 type MessageMap map[string]MessageHandler
 
 // Process does the actual work of dealing with an incoming message.
-// It checks to make sure a message handling function is assigned to that message,
-// raising an error if not.
+// It checks to make sure a message handling function is assigned to that message, raising an error if not.
 // Assuming a message handling function is found, it is executed,
 // resulting in a new state.  This new state is set on the session,
 // and any further messages are sent for processing in the same way (recursively).
@@ -170,7 +187,6 @@ func (message Message) Process(session *Session, app *Application) error {
 
 	// TODO: We might want to check both maps here and raise
 	// some sort of log message if there is a clash of names
-
 	if !found {
 		// Care to overwrite the funcToExecute variable above
 		funcToExecute, found = app.Messages[message.Message]
@@ -180,7 +196,6 @@ func (message Message) Process(session *Session, app *Application) error {
 	}
 
 	response := funcToExecute(message.Arguments, session.State)
-
 	if response.Error != nil {
 		return response.Error
 	}
@@ -188,9 +203,7 @@ func (message Message) Process(session *Session, app *Application) error {
 	session.State = response.State
 	session.render(app, nil)
 
-	// TODO: new thread?
 	if response.NextMsg != nil {
-
 		if response.Delay > 0 {
 			time.Sleep(response.Delay * time.Millisecond)
 		}
@@ -200,12 +213,6 @@ func (message Message) Process(session *Session, app *Application) error {
 
 	return nil
 }
-
-// How do we wire this whole thing up?
-// We'll need a server to serve a single endpoint.
-// The handler for that endpoint will do the work
-// of establishing the websocket connection and running the infinite
-// loop until disconnection.
 
 // upgrader prepares the upgrader for websocket connections
 var upgrader = websocket.Upgrader{
@@ -239,14 +246,12 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 
 	// create a new session
 	// this will use the state seeder to create a default state
-	session, err := app.newSession(r, conn, startingRoute)
-	if err != nil {
-		session.render(app, err)
-	}
+	session := app.newSession(r, conn, startingRoute)
+	session.render(app, err)
 
 	// defer closing the connection and removing it from the session
-	defer conn.Close()
-	defer session.remove(app)
+	defer session.Conn.Close()
+	defer session.close(app)
 
 	// the main runtime loop
 	for {

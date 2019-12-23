@@ -2,7 +2,6 @@ package gotea
 
 import (
 	"encoding/json"
-	"net/http"
 	"net/url"
 	"strings"
 )
@@ -12,20 +11,14 @@ type Routable interface {
 	RouteParam(string) string
 	RouteTemplate() string
 	RouteUpdateHook() State
-	SetOriginalRequest(*http.Request)
 }
 
 type Router struct {
-	Route           string
-	OriginalRequest *http.Request
+	Route string
 }
 
 var routingMessages = MessageMap{
 	"CHANGE_ROUTE": changeRoute,
-}
-
-func (r *Router) SetOriginalRequest(request *http.Request) {
-	r.OriginalRequest = request
 }
 
 func (r *Router) SetRoute(newRoute string) {

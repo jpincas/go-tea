@@ -4,7 +4,7 @@
 {{block body()}}
 <h2>Routing</h2>
 
-<h3>Current Route: {{ .Router.Route }}</h3>
+<h3>Current Route: {{ .GetRoute() }}</h3>
 
 <p>The main navigation bar above is an example of GoTea routing.</p>
 <p>Clicking on any of the links triggers a "CHANGE_ROUTE" message to be sent, with the new route as an argument. The
