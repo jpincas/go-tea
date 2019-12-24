@@ -2,9 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"strings"
+	"net/url"
 
 	gt "github.com/jpincas/go-tea"
 	"github.com/jpincas/go-tea/example/tagselector"
@@ -44,20 +43,14 @@ func (m Model) Update() gt.MessageMap {
 	)
 }
 
-func (m Model) RouteTemplate() string {
-	currentRoute := m.GetRoute()
-	routeTemplate := strings.Replace(currentRoute, "/", "_", -1)
-
-	if routeTemplate == "" {
-		return "home"
+func (m Model) Mux(path *url.URL) (gt.State, string) {
+	// Ridiculously simle routing model -
+	// the name of the template is the name of the path
+	if path.Path == "/" {
+		return m, "home"
 	}
 
-	return routeTemplate
-}
-
-func (m Model) RouteUpdateHook() gt.State {
-	fmt.Println("Example app to world: changing route now!")
-	return m
+	return m, path.Path
 }
 
 func main() {

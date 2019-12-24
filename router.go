@@ -3,41 +3,51 @@ package gotea
 import (
 	"encoding/json"
 	"net/url"
-	"strings"
 )
 
 type Routable interface {
-	SetRoute(string)
+	SetNewRoute(string, string)
+	GetRoute() string
+	GetTemplate() string
 	RouteParam(string) string
-	RouteTemplate() string
-	RouteUpdateHook() State
 }
 
 type Router struct {
-	Route string
+	Route        string
+	TemplateName string
 }
 
 var routingMessages = MessageMap{
 	"CHANGE_ROUTE": changeRoute,
 }
 
-func (r *Router) SetRoute(newRoute string) {
-	r.Route = newRoute
+func (r *Router) SetNewRoute(route, template string) {
+	r.Route = route
+	r.TemplateName = template
 }
 
-func changeRoute(args json.RawMessage, s State) Response {
+func changeRoute(args json.RawMessage, state State) Response {
 	var newRoute string
 	if err := json.Unmarshal(args, &newRoute); err != nil {
-		return RespondWithError(s, err)
+		return RespondWithError(state, err)
 	}
 
-	// Set the new route on the router
-	s.SetRoute(newRoute)
+	return Respond(setRoute(state, newRoute))
+}
+
+func setRoute(state State, newRoute string) State {
+	// Parse the new route
+	u, _ := url.Parse(newRoute)
 
 	// Before returning, fire the route update hook.
 	// This is provided by the application and can implement any
 	// custom logic required
-	return Respond(s.RouteUpdateHook())
+	newState, newTemplate := state.Mux(u)
+
+	// Set the new route and template on the router
+	newState.SetNewRoute(newRoute, newTemplate)
+
+	return newState
 }
 
 //  Route Helpers
@@ -51,14 +61,9 @@ func (r Router) RouteParam(param string) string {
 }
 
 func (r Router) GetRoute() string {
-	// Trim any / at the start/end
-	s := strings.Trim(r.Route, "/")
+	return r.Route
+}
 
-	// Remove any params
-	paramsStart := strings.Index(s, "?")
-	if paramsStart != -1 {
-		s = s[0:paramsStart]
-	}
-
-	return s
+func (r Router) GetTemplate() string {
+	return r.TemplateName
 }
