@@ -18,7 +18,7 @@ type Model struct {
 }
 
 func (m Model) Init(_ *http.Request) gt.State {
-	return Model{
+	return &Model{
 		BaseModel: &gt.BaseModel{},
 		MemoryGame: MemoryGame{
 			Deck:              NewDeck(4),
@@ -43,20 +43,20 @@ func (m Model) Update() gt.MessageMap {
 	)
 }
 
-func (m Model) Mux(path *url.URL) (gt.State, string) {
+func (m *Model) Mux(path *url.URL) string {
 	// Ridiculously simle routing model -
 	// the name of the template is the name of the path
 	if path.Path == "/" {
-		return m, "home"
+		return "home"
 	}
 
-	return m, path.Path
+	return path.Path
 }
 
 func main() {
 	app := gt.NewApp(
 		gt.DefaultAppConfig,
-		Model{},
+		&Model{},
 		nil,
 	)
 

@@ -53,7 +53,7 @@ type Card struct {
 }
 
 func FlipCard(args json.RawMessage, s gt.State) gt.Response {
-	state := s.(Model)
+	state := s.(*Model)
 
 	// cast the argument to int - comes back from JS as float64
 	var cardToFlip int
@@ -78,7 +78,7 @@ func FlipCard(args json.RawMessage, s gt.State) gt.Response {
 }
 
 func RestartGame(_ json.RawMessage, s gt.State) gt.Response {
-	state := s.(Model)
+	state := s.(*Model)
 	state.MemoryGame.Deck.reset()
 	state.MemoryGame.resetScores()
 	return gt.Respond(state)
@@ -86,14 +86,14 @@ func RestartGame(_ json.RawMessage, s gt.State) gt.Response {
 
 func FlipAllBack(_ json.RawMessage, s gt.State) gt.Response {
 	// time.Sleep(500 * time.Millisecond)
-	state := s.(Model)
+	state := s.(*Model)
 	state.MemoryGame.Deck.flipAllBack()
 	return gt.Respond(state)
 }
 
 func RemoveMatches(_ json.RawMessage, s gt.State) gt.Response {
 	// time.Sleep(500 * time.Millisecond)
-	state := s.(Model)
+	state := s.(*Model)
 	state.MemoryGame.Deck.removeMatches()
 
 	if state.MemoryGame.HasWon() {

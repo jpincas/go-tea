@@ -22,7 +22,7 @@ var nameSelectorMessages = map[string]gt.MessageHandler{
 }
 
 func nameSelectorSelectTag(args json.RawMessage, s gt.State) gt.Response {
-	state := s.(Model)
+	state := s.(*Model)
 
 	var tag string
 	if err := json.Unmarshal(args, &tag); err != nil {
@@ -34,7 +34,7 @@ func nameSelectorSelectTag(args json.RawMessage, s gt.State) gt.Response {
 }
 
 func nameSelectorRemoveTag(args json.RawMessage, s gt.State) gt.Response {
-	state := s.(Model)
+	state := s.(*Model)
 
 	var tag string
 	if err := json.Unmarshal(args, &tag); err != nil {
@@ -46,7 +46,7 @@ func nameSelectorRemoveTag(args json.RawMessage, s gt.State) gt.Response {
 }
 
 func nameSelectorSearchInputUpdate(args json.RawMessage, s gt.State) gt.Response {
-	state := s.(Model)
+	state := s.(*Model)
 
 	var input string
 	if err := json.Unmarshal(args, &input); err != nil {

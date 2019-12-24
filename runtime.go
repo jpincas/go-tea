@@ -35,7 +35,7 @@ type State interface {
 	Update() MessageMap
 
 	// Mux must be defined by the user.  It is a routing function that determines the template to use as well as any logic to perform based on the route.
-	Mux(*url.URL) (State, string)
+	Mux(*url.URL) string
 
 	// PROVIDED METHODS
 
@@ -393,8 +393,8 @@ func (app *Application) initRouter(router *chi.Mux) {
 func (app Application) newState(r *http.Request, path string) State {
 	state := app.Model.Init(r)
 	state.SetOriginalRequest(r)
-	newState := setRoute(state, path)
-	return newState
+	setRoute(state, path)
+	return state
 }
 
 // Start creates the router, and serves it!

@@ -23,7 +23,7 @@ var formMessages gt.MessageMap = gt.MessageMap{
 }
 
 func formUpdate(args json.RawMessage, s gt.State) gt.Response {
-	state := s.(Model)
+	state := s.(*Model)
 
 	if err := json.Unmarshal(args, &state.Form); err != nil {
 		return gt.RespondWithError(state, err)

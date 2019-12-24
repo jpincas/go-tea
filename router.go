@@ -32,22 +32,21 @@ func changeRoute(args json.RawMessage, state State) Response {
 		return RespondWithError(state, err)
 	}
 
-	return Respond(setRoute(state, newRoute))
+	setRoute(state, newRoute)
+	return Respond(state)
 }
 
-func setRoute(state State, newRoute string) State {
+func setRoute(state State, newRoute string) {
 	// Parse the new route
 	u, _ := url.Parse(newRoute)
 
 	// Before returning, fire the route update hook.
 	// This is provided by the application and can implement any
 	// custom logic required
-	newState, newTemplate := state.Mux(u)
+	newTemplate := state.Mux(u)
 
 	// Set the new route and template on the router
-	newState.SetNewRoute(newRoute, newTemplate)
-
-	return newState
+	state.SetNewRoute(newRoute, newTemplate)
 }
 
 //  Route Helpers

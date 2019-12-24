@@ -20,7 +20,7 @@ var teamSelectorMessages = map[string]gt.MessageHandler{
 }
 
 func teamSelectorSelectTag(args json.RawMessage, s gt.State) gt.Response {
-	state := s.(Model)
+	state := s.(*Model)
 
 	var tag string
 	if err := json.Unmarshal(args, &tag); err != nil {
@@ -32,7 +32,7 @@ func teamSelectorSelectTag(args json.RawMessage, s gt.State) gt.Response {
 }
 
 func teamSelectorSearchInputUpdate(args json.RawMessage, s gt.State) gt.Response {
-	state := s.(Model)
+	state := s.(*Model)
 
 	var input string
 	if err := json.Unmarshal(args, &input); err != nil {
@@ -44,7 +44,7 @@ func teamSelectorSearchInputUpdate(args json.RawMessage, s gt.State) gt.Response
 }
 
 func teamSelectorRemoveTag(args json.RawMessage, s gt.State) gt.Response {
-	state := s.(Model)
+	state := s.(*Model)
 
 	var tag string
 	if err := json.Unmarshal(args, &tag); err != nil {
