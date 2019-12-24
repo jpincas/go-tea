@@ -58,7 +58,7 @@ func FlipCard(args json.RawMessage, s gt.State) gt.Response {
 	// cast the argument to int - comes back from JS as float64
 	var cardToFlip int
 	if err := json.Unmarshal(args, &cardToFlip); err != nil {
-		return gt.RespondWithError(state, err)
+		return gt.RespondWithError(err)
 	}
 
 	state.MemoryGame.Deck.flipCard(cardToFlip)
@@ -68,27 +68,27 @@ func FlipCard(args json.RawMessage, s gt.State) gt.Response {
 
 		if state.MemoryGame.Deck.hasFoundMatch() {
 			state.MemoryGame.incrementScore()
-			return gt.RespondWithDelayedNextMsg(state, "REMOVE_MATCHES", nil, 1000)
+			return gt.RespondWithDelayedNextMsg("REMOVE_MATCHES", nil, 1000)
 		}
 
-		return gt.RespondWithDelayedNextMsg(state, "FLIP_ALL_BACK", nil, 1000)
+		return gt.RespondWithDelayedNextMsg("FLIP_ALL_BACK", nil, 1000)
 	}
 
-	return gt.Respond(state)
+	return gt.Respond()
 }
 
 func RestartGame(_ json.RawMessage, s gt.State) gt.Response {
 	state := s.(*Model)
 	state.MemoryGame.Deck.reset()
 	state.MemoryGame.resetScores()
-	return gt.Respond(state)
+	return gt.Respond()
 }
 
 func FlipAllBack(_ json.RawMessage, s gt.State) gt.Response {
 	// time.Sleep(500 * time.Millisecond)
 	state := s.(*Model)
 	state.MemoryGame.Deck.flipAllBack()
-	return gt.Respond(state)
+	return gt.Respond()
 }
 
 func RemoveMatches(_ json.RawMessage, s gt.State) gt.Response {
@@ -102,7 +102,7 @@ func RemoveMatches(_ json.RawMessage, s gt.State) gt.Response {
 		}
 	}
 
-	return gt.Respond(state)
+	return gt.Respond()
 }
 
 func NewDeck(n int) (deck Deck) {

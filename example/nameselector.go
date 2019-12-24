@@ -26,11 +26,11 @@ func nameSelectorSelectTag(args json.RawMessage, s gt.State) gt.Response {
 
 	var tag string
 	if err := json.Unmarshal(args, &tag); err != nil {
-		return gt.RespondWithError(state, err)
+		return gt.RespondWithError(err)
 	}
 
 	state.NameSelector.SelectTag(tag)
-	return gt.Respond(state)
+	return gt.Respond()
 }
 
 func nameSelectorRemoveTag(args json.RawMessage, s gt.State) gt.Response {
@@ -38,11 +38,11 @@ func nameSelectorRemoveTag(args json.RawMessage, s gt.State) gt.Response {
 
 	var tag string
 	if err := json.Unmarshal(args, &tag); err != nil {
-		return gt.RespondWithError(state, err)
+		return gt.RespondWithError(err)
 	}
 
 	state.NameSelector.RemoveTag(tag)
-	return gt.Respond(state)
+	return gt.Respond()
 }
 
 func nameSelectorSearchInputUpdate(args json.RawMessage, s gt.State) gt.Response {
@@ -50,9 +50,9 @@ func nameSelectorSearchInputUpdate(args json.RawMessage, s gt.State) gt.Response
 
 	var input string
 	if err := json.Unmarshal(args, &input); err != nil {
-		return gt.RespondWithError(state, err)
+		return gt.RespondWithError(err)
 	}
 
 	state.NameSelector.SuggestTags(input)
-	return gt.Respond(state)
+	return gt.Respond()
 }

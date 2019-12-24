@@ -26,8 +26,8 @@ func formUpdate(args json.RawMessage, s gt.State) gt.Response {
 	state := s.(*Model)
 
 	if err := json.Unmarshal(args, &state.Form); err != nil {
-		return gt.RespondWithError(state, err)
+		return gt.RespondWithError(err)
 	}
 
-	return gt.Respond(state)
+	return gt.Respond()
 }

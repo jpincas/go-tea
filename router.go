@@ -29,11 +29,11 @@ func (r *Router) SetNewRoute(route, template string) {
 func changeRoute(args json.RawMessage, state State) Response {
 	var newRoute string
 	if err := json.Unmarshal(args, &newRoute); err != nil {
-		return RespondWithError(state, err)
+		return RespondWithError(err)
 	}
 
 	setRoute(state, newRoute)
-	return Respond(state)
+	return Respond()
 }
 
 func setRoute(state State, newRoute string) {

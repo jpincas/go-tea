@@ -160,7 +160,6 @@ type Message struct {
 // response is the new state, but they can optionally return another message to be
 // processed (after an optional delay)
 type Response struct {
-	State   State
 	NextMsg *Message
 	Delay   time.Duration
 	Error   error
@@ -203,7 +202,7 @@ func (message Message) Process(session *Session, app *Application) error {
 		return response.Error
 	}
 
-	session.State = response.State
+	// session.State = response.State
 	session.render(app, nil)
 
 	if response.NextMsg != nil {
