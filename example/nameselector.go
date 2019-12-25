@@ -5,6 +5,7 @@ import (
 
 	gt "github.com/jpincas/go-tea"
 	"github.com/jpincas/go-tea/example/tagselector"
+	"github.com/jpincas/go-tea/msg"
 )
 
 // Name Selector (instantiation of Tag Selector)
@@ -22,10 +23,10 @@ var nameSelectorMessages = map[string]gt.MessageHandler{
 }
 
 func nameSelectorSelectTag(args json.RawMessage, s gt.State) gt.Response {
-	state := s.(*Model)
+	state := model(s)
 
-	var tag string
-	if err := json.Unmarshal(args, &tag); err != nil {
+	tag, err := msg.DecodeString(args)
+	if err != nil {
 		return gt.RespondWithError(err)
 	}
 
@@ -34,10 +35,10 @@ func nameSelectorSelectTag(args json.RawMessage, s gt.State) gt.Response {
 }
 
 func nameSelectorRemoveTag(args json.RawMessage, s gt.State) gt.Response {
-	state := s.(*Model)
+	state := model(s)
 
-	var tag string
-	if err := json.Unmarshal(args, &tag); err != nil {
+	tag, err := msg.DecodeString(args)
+	if err != nil {
 		return gt.RespondWithError(err)
 	}
 
@@ -46,10 +47,10 @@ func nameSelectorRemoveTag(args json.RawMessage, s gt.State) gt.Response {
 }
 
 func nameSelectorSearchInputUpdate(args json.RawMessage, s gt.State) gt.Response {
-	state := s.(*Model)
+	state := model(s)
 
-	var input string
-	if err := json.Unmarshal(args, &input); err != nil {
+	input, err := msg.DecodeString(args)
+	if err != nil {
 		return gt.RespondWithError(err)
 	}
 

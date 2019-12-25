@@ -20,6 +20,10 @@ type Model struct {
 	RouteData    int
 }
 
+func model(s gt.State) *Model {
+	return s.(*Model)
+}
+
 func (m Model) Init(_ *http.Request) gt.State {
 	return &Model{
 		BaseModel: gt.BaseModel{},

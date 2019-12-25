@@ -5,6 +5,7 @@ import (
 	"math/rand"
 
 	gt "github.com/jpincas/go-tea"
+	"github.com/jpincas/go-tea/msg"
 )
 
 var memoryGameMessages gt.MessageMap = gt.MessageMap{
@@ -53,11 +54,10 @@ type Card struct {
 }
 
 func FlipCard(args json.RawMessage, s gt.State) gt.Response {
-	state := s.(*Model)
+	state := model(s)
 
-	// cast the argument to int - comes back from JS as float64
-	var cardToFlip int
-	if err := json.Unmarshal(args, &cardToFlip); err != nil {
+	cardToFlip, err := msg.DecodeInt(args)
+	if err != nil {
 		return gt.RespondWithError(err)
 	}
 
@@ -78,22 +78,20 @@ func FlipCard(args json.RawMessage, s gt.State) gt.Response {
 }
 
 func RestartGame(_ json.RawMessage, s gt.State) gt.Response {
-	state := s.(*Model)
+	state := model(s)
 	state.MemoryGame.Deck.reset()
 	state.MemoryGame.resetScores()
 	return gt.Respond()
 }
 
 func FlipAllBack(_ json.RawMessage, s gt.State) gt.Response {
-	// time.Sleep(500 * time.Millisecond)
-	state := s.(*Model)
+	state := model(s)
 	state.MemoryGame.Deck.flipAllBack()
 	return gt.Respond()
 }
 
 func RemoveMatches(_ json.RawMessage, s gt.State) gt.Response {
-	// time.Sleep(500 * time.Millisecond)
-	state := s.(*Model)
+	state := model(s)
 	state.MemoryGame.Deck.removeMatches()
 
 	if state.MemoryGame.HasWon() {
