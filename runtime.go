@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/CloudyKit/jet"
@@ -33,9 +32,6 @@ type State interface {
 	// Update is defined by the user and defines the MessageMap that is used to modify state.
 	// on each loop of the runtime
 	Update() MessageMap
-
-	// Mux must be defined by the user.  It is a routing function that determines the template to use as well as any logic to perform based on the route.
-	Mux(*url.URL) string
 
 	// PROVIDED METHODS
 
@@ -392,7 +388,7 @@ func (app *Application) initRouter(router *chi.Mux) {
 func (app Application) newState(r *http.Request, path string) State {
 	state := app.Model.Init(r)
 	state.SetOriginalRequest(r)
-	setRoute(state, path)
+	changeRoute(state, path)
 	return state
 }
 

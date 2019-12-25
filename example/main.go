@@ -2,24 +2,27 @@ package main
 
 import (
 	"encoding/json"
+	"math/rand"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	gt "github.com/jpincas/go-tea"
 	"github.com/jpincas/go-tea/example/tagselector"
 )
 
 type Model struct {
-	*gt.BaseModel
+	gt.BaseModel
 	MemoryGame   MemoryGame
 	NameSelector tagselector.Model
 	TeamSelector tagselector.Model
 	Form         Form
+	RouteData    int
 }
 
 func (m Model) Init(_ *http.Request) gt.State {
 	return &Model{
-		BaseModel: &gt.BaseModel{},
+		BaseModel: gt.BaseModel{},
 		MemoryGame: MemoryGame{
 			Deck:              NewDeck(4),
 			TurnsTaken:        0,
@@ -31,6 +34,7 @@ func (m Model) Init(_ *http.Request) gt.State {
 		Form: Form{
 			Options: []string{"option 1", "option 2", "option 3"},
 		},
+		RouteData: 0,
 	}
 }
 
@@ -43,14 +47,22 @@ func (m Model) Update() gt.MessageMap {
 	)
 }
 
-func (m *Model) Mux(path *url.URL) string {
+func (m *Model) OnRouteChange(path string) {
 	// Ridiculously simle routing model -
 	// the name of the template is the name of the path
-	if path.Path == "/" {
-		return "home"
+	p, _ := url.Parse(path)
+
+	template := p.Path
+	if template == "/" {
+		template = "home"
 	}
 
-	return path.Path
+	// Generate some 'route data'
+	param := m.RouteParam("myparam")
+	n, _ := strconv.Atoi(param)
+	m.RouteData = rand.Intn((100 * n) + 100)
+
+	m.SetNewTemplate(template)
 }
 
 func main() {
