@@ -18,6 +18,7 @@ type Model struct {
 	TeamSelector tagselector.Model
 	Form         Form
 	RouteData    int
+	Animation    Animation
 }
 
 func model(s gt.State) *Model {
@@ -39,6 +40,12 @@ func (m Model) Init(_ *http.Request) gt.State {
 			Options: []string{"option 1", "option 2", "option 3"},
 		},
 		RouteData: 0,
+		Animation: Animation{
+			X:          50,
+			Y:          50,
+			XDirection: true,
+			YDirection: true,
+		},
 	}
 }
 
@@ -48,6 +55,7 @@ func (m Model) Update() gt.MessageMap {
 		formMessages,
 		nameSelector.UniqueMsgMap(nameSelectorMessages),
 		teamSelector.UniqueMsgMap(teamSelectorMessages),
+		animationMessages,
 	)
 }
 
