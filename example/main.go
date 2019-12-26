@@ -11,6 +11,11 @@ import (
 	"github.com/jpincas/go-tea/example/tagselector"
 )
 
+const (
+	animationBackgroundSize = 500
+	animationBallSize       = 20
+)
+
 type Model struct {
 	gt.BaseModel
 	MemoryGame   MemoryGame
@@ -41,10 +46,16 @@ func (m Model) Init(_ *http.Request) gt.State {
 		},
 		RouteData: 0,
 		Animation: Animation{
-			X:          50,
-			Y:          50,
-			XDirection: true,
-			YDirection: true,
+			X:              50,
+			Y:              50,
+			XDirection:     true,
+			YDirection:     true,
+			BackgroundSize: animationBackgroundSize,
+			BallSize:       animationBallSize,
+			TranslateX:     translate(50, animationBackgroundSize, animationBallSize),
+			TranslateY:     translate(50, animationBackgroundSize, animationBallSize),
+			IncrementX:     2,
+			IncrementY:     1,
 		},
 	}
 }

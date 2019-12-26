@@ -5,10 +5,30 @@
 
 <h2>A Server-Driven Animation</h2>
 
+<p>A 30fps bouncing ball animation being driven entirely by the server. You'd probably never want to do this, but is fun
+    to know that you can! Clicking 'start' fires off a never-ending sequence of messages with a 33ms delay between each.
+    Each message sets the x and y coordinates of the ball and the scene is rerendered by the Gotea runtime.</p>
+
 <button onclick='{{ goteaMessage(`START_ANIMATION`, ``) }}'>
     Start Animation
 </button>
 
+<button onclick='{{ goteaMessage(`STOP_ANIMATION`, ``) }}'>
+    Stop Animation
+</button>
+
+<button onclick='{{ goteaMessage(`RESET_ANIMATION`, ``) }}'>
+    Reset Animation
+</button>
+
+
 <p>Coordinates: ({{ .Animation.X }}, {{ .Animation.Y }})</p>
+
+<div id="animation-background">
+    <div id="animation-ball"
+        style='transform: translate({{ .Animation.TranslateX }}px, {{ .Animation.TranslateY }}px);'></div>
+</div>
+
+
 
 {{ end }}

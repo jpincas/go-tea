@@ -57,8 +57,9 @@ func (b *BaseModel) SetOriginalRequest(request *http.Request) {
 // and a lump of state (see above).  When a client connects, a new session is opened with a pointer
 // to the websocker connection and the initial state (more on that later)
 type Session struct {
-	Conn  *websocket.Conn
-	State State
+	Closed bool
+	Conn   *websocket.Conn
+	State  State
 }
 
 // SessionStore tracks a list of active sessions.  When a session is opened,
@@ -90,9 +91,9 @@ func (session *Session) add(app *Application) {
 // close does the work of closing a session, including recording on the model that it is about to close,
 // actually closing the connection, and removing it from the list.
 func (session *Session) close(app *Application) {
-	defer session.Conn.Close()
-
 	log.Println("Closing session")
+	session.Closed = true
+	session.Conn.Close()
 
 	// remove, as you could expect, just removes the session from the session store.
 	for i, stored := range app.Sessions {
@@ -178,6 +179,13 @@ type MessageMap map[string]MessageHandler
 // Finally, a render of the new state takes place, sending new HTML down the websocket to the client,
 // and starting the cycle again.
 func (message Message) Process(session *Session, app *Application) error {
+	// Since messages can trigger themselves, they can potentially set off an infinite loop,
+	// which would not be interrupted by the connection closing.  So here we check that the connection is open
+	// before processing the message.
+	if session.Closed {
+		return fmt.Errorf("Could not process message %s: connection has been closed", message.Message)
+	}
+
 	// Try system messages first.
 	// At the moment, just the router, but could expand
 	systemMessages := routingMessages
@@ -257,10 +265,12 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 			break
 		}
 
-		// and send for processing
-		if err := message.Process(session, app); err != nil {
-			session.render(app, err)
-		}
+		// process inside a go routine so as to not block the runtime loop
+		go func() {
+			if err := message.Process(session, app); err != nil {
+				session.render(app, err)
+			}
+		}()
 	}
 }
 

@@ -120,3 +120,17 @@ button.flipcard {
 .tagselector-selectedtag::after {
     content: " × ";
 }
+
+/* Animation */
+#animation-background {
+    width: 500px;
+    height: 500px;
+    background-color: rgb(50, 50, 50);
+}
+
+#animation-ball {
+    width: 20px;
+    height: 20px;
+    background-color: yellow;
+    border-radius: 50%;
+}
