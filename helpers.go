@@ -19,27 +19,24 @@ func MergeMaps(msgMaps ...MessageMap) MessageMap {
 
 // Message Response Helpers
 
-func Respond(state State) Response {
+func Respond() Response {
 	return Response{
-		State:   state,
 		NextMsg: nil,
 		Delay:   0,
 		Error:   nil,
 	}
 }
 
-func RespondWithError(state State, err error) Response {
+func RespondWithError(err error) Response {
 	return Response{
-		State:   state,
 		NextMsg: nil,
 		Delay:   0,
 		Error:   err,
 	}
 }
 
-func RespondWithNextMsg(state State, msg string, args json.RawMessage) Response {
+func RespondWithNextMsg(msg string, args json.RawMessage) Response {
 	return Response{
-		State: state,
 		NextMsg: &Message{
 			Message:   msg,
 			Arguments: args,
@@ -49,9 +46,8 @@ func RespondWithNextMsg(state State, msg string, args json.RawMessage) Response 
 	}
 }
 
-func RespondWithDelayedNextMsg(state State, msg string, args json.RawMessage, delay time.Duration) Response {
+func RespondWithDelayedNextMsg(msg string, args json.RawMessage, delay time.Duration) Response {
 	return Response{
-		State: state,
 		NextMsg: &Message{
 			Message:   msg,
 			Arguments: args,

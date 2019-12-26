@@ -3,44 +3,31 @@ package gotea
 import (
 	"encoding/json"
 	"net/url"
-	"strings"
 )
 
 type Routable interface {
-	SetRoute(string)
+	SetNewRoute(string)
+	GetRoute() string
+	GetTemplate() string
 	RouteParam(string) string
-	RouteTemplate() string
-	RouteUpdateHook() State
+
+	// OnRouteChange must be defined by the user.  It is a routing function that determines the template to use as well as any logic to perform based on the route.
+	OnRouteChange(string)
 }
 
 type Router struct {
-	Route string
+	Route        string
+	TemplateName string
 }
 
-var routingMessages = MessageMap{
-	"CHANGE_ROUTE": changeRoute,
+func (r *Router) SetNewRoute(route string) {
+	r.Route = route
 }
 
-func (r *Router) SetRoute(newRoute string) {
-	r.Route = newRoute
+func (r *Router) SetNewTemplate(templateName string) {
+	r.TemplateName = templateName
 }
 
-func changeRoute(args json.RawMessage, s State) Response {
-	var newRoute string
-	if err := json.Unmarshal(args, &newRoute); err != nil {
-		return RespondWithError(s, err)
-	}
-
-	// Set the new route on the router
-	s.SetRoute(newRoute)
-
-	// Before returning, fire the route update hook.
-	// This is provided by the application and can implement any
-	// custom logic required
-	return Respond(s.RouteUpdateHook())
-}
-
-//  Route Helpers
 func (r Router) RouteParam(param string) string {
 	rel, err := url.Parse(r.Route)
 	if err != nil {
@@ -51,14 +38,32 @@ func (r Router) RouteParam(param string) string {
 }
 
 func (r Router) GetRoute() string {
-	// Trim any / at the start/end
-	s := strings.Trim(r.Route, "/")
+	return r.Route
+}
 
-	// Remove any params
-	paramsStart := strings.Index(s, "?")
-	if paramsStart != -1 {
-		s = s[0:paramsStart]
+func (r Router) GetTemplate() string {
+	return r.TemplateName
+}
+
+var routingMessages = MessageMap{
+	"CHANGE_ROUTE": changeRouteMsgHandler,
+}
+
+// changeRouteMsgHandler is the built in message handler which is fired when a
+// navigation event is detected
+func changeRouteMsgHandler(args json.RawMessage, state State) Response {
+	var newRoute string
+	if err := json.Unmarshal(args, &newRoute); err != nil {
+		return RespondWithError(err)
 	}
 
-	return s
+	changeRoute(state, newRoute)
+	return Respond()
+}
+
+// changeRoute is fired both by the route change message handler and on establishment
+// of a new state blob.  It fires the app-provided routing logic and sets the new route /// on the model.
+func changeRoute(state State, newRoute string) {
+	state.OnRouteChange(newRoute)
+	state.SetNewRoute(newRoute)
 }

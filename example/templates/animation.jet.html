@@ -1,0 +1,14 @@
+{{extends "layout"}}
+{{block title()}} Server Animation {{end}}
+
+{{block body()}}
+
+<h2>A Server-Driven Animation</h2>
+
+<button onclick='{{ goteaMessage(`START_ANIMATION`, ``) }}'>
+    Start Animation
+</button>
+
+<p>Coordinates: ({{ .Animation.X }}, {{ .Animation.Y }})</p>
+
+{{ end }}

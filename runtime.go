@@ -156,7 +156,6 @@ type Message struct {
 // response is the new state, but they can optionally return another message to be
 // processed (after an optional delay)
 type Response struct {
-	State   State
 	NextMsg *Message
 	Delay   time.Duration
 	Error   error
@@ -199,7 +198,7 @@ func (message Message) Process(session *Session, app *Application) error {
 		return response.Error
 	}
 
-	session.State = response.State
+	// session.State = response.State
 	session.render(app, nil)
 
 	if response.NextMsg != nil {
@@ -320,7 +319,8 @@ func (app Application) renderError(w io.Writer, state State, errorToRender error
 }
 
 func (app Application) render(w io.Writer, state State) {
-	t, err := app.Templates.GetTemplate(state.RouteTemplate())
+
+	t, err := app.Templates.GetTemplate(state.GetTemplate())
 	if err != nil {
 		app.renderError(w, state, err)
 		return
@@ -381,11 +381,15 @@ func (app *Application) initRouter(router *chi.Mux) {
 	app.Router = router
 }
 
+// newState bootstraps a new state model according to the init()
+// provided by the calling app.  We also record the original http request
+// and perform a 'route set' which will run any route dependent logic
+// as well as set the starting template.
 func (app Application) newState(r *http.Request, path string) State {
 	state := app.Model.Init(r)
-	state.SetRoute(path)
 	state.SetOriginalRequest(r)
-	return state.RouteUpdateHook()
+	changeRoute(state, path)
+	return state
 }
 
 // Start creates the router, and serves it!

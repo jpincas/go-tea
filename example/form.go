@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	gt "github.com/jpincas/go-tea"
+	"github.com/jpincas/go-tea/msg"
 )
 
 type Form struct {
@@ -23,11 +24,11 @@ var formMessages gt.MessageMap = gt.MessageMap{
 }
 
 func formUpdate(args json.RawMessage, s gt.State) gt.Response {
-	state := s.(Model)
+	state := model(s)
 
-	if err := json.Unmarshal(args, &state.Form); err != nil {
-		return gt.RespondWithError(state, err)
+	if err := msg.DecodeStruct(args, &state.Form); err != nil {
+		return gt.RespondWithError(err)
 	}
 
-	return gt.Respond(state)
+	return gt.Respond()
 }

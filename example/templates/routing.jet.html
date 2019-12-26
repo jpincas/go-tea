@@ -7,9 +7,10 @@
 <h3>Current Route: {{ .GetRoute() }}</h3>
 
 <p>The main navigation bar above is an example of GoTea routing.</p>
-<p>Clicking on any of the links triggers a "CHANGE_ROUTE" message to be sent, with the new route as an argument. The
-    application code simply sets a state property according to the new route and the main template/view uses conditional
-    rendering to carry on rendering the app with the correct template. Try it out!</p>
+<p>Clicking on any of the links triggers a "CHANGE_ROUTE" message to be sent, with the new route as an argument.
+    The app-provided routing function then decides whether to change the view template and performs any
+    route-conditional logic.
+</p>
 
 <h3>Here's an internal link:</h3>
 <a href="/memory">Memory Game</a>
@@ -26,5 +27,8 @@
 </ul>
 
 <h4>Value of 'myparam': {{  .RouteParam("myparam") }}</h4>
+
+<h3>A random number generated before rendering by the routing hook (a simple representation of route-specific data
+    loading): {{  .RouteData }}</h3>
 
 {{end}}
