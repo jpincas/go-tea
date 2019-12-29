@@ -11,7 +11,7 @@
 {{ yield deck() .MemoryGame.Deck }}
 {{ if .MemoryGame.HasWon() }}
 <h2>Well Done! You Won!</h2>
-<button onclick='{{ goteaMessage(`RESTART_GAME`, ``) }}'>
+<button onclick='{{ goteaMessage_(`RESTART_GAME`) }}'>
     New Game
 </button>
 {{ end }}
