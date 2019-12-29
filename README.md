@@ -1,5 +1,7 @@
 # 🍵 Gotea
 
+### Status: works well, but still experimental, API in constant flux and needs a lot of polishing.  If you're interested in using/helping, probably best to contact me.
+
 ## What?
 
 Gotea is a small, experimental library that loosely implements a form of TEA (The Elm Architecture) or a Redux-like system, but in Go, using server-side state, server-rendered HTML, websockets and messages - it lets you create SPA-like applications without having to write a single line of Javascript.  
