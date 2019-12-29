@@ -24,6 +24,7 @@ type Model struct {
 	Form         Form
 	RouteData    int
 	Animation    Animation
+	Counter      int
 }
 
 func model(s gt.State) *Model {
@@ -57,6 +58,7 @@ func (m Model) Init(_ *http.Request) gt.State {
 			IncrementX:     2,
 			IncrementY:     1,
 		},
+		Counter: 0,
 	}
 }
 
@@ -67,6 +69,7 @@ func (m Model) Update() gt.MessageMap {
 		nameSelector.UniqueMsgMap(nameSelectorMessages),
 		teamSelector.UniqueMsgMap(teamSelectorMessages),
 		animationMessages,
+		counterMessages,
 	)
 }
 

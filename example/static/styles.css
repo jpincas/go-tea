@@ -134,3 +134,17 @@ button.flipcard {
     background-color: yellow;
     border-radius: 50%;
 }
+
+/* Counter */
+
+#counter {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+#counter .counter-readout {
+    font-size: 2em;
+    font-weight: bold;
+    margin: 0px 5px;
+}

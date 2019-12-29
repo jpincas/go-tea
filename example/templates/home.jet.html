@@ -1,6 +1,21 @@
 {{extends "layout"}}
 {{block title()}}GoTea Example{{end}}
 {{block body()}}
-<h2>This is the the homepage</h2>
-<p>Choose an example from the menu to get started...</p>
+<h2>Gotea Demo Site</h2>
+<p>Choose an example from the menu to get started, or have a play with the classic 'counter' example below:</p>
+{{ yield counter() .Counter }}
 {{end}}
+
+{{block counter()}}
+<div id="counter">
+    <button class='counter-increment' onclick='{{ goteaMessage(`INCREMENT_COUNTER`, -1) }}'>
+        Down
+    </button>
+    <div class="counter-readout">
+        {{ . }}
+    </div>
+    <button class='counter-increment' onclick='{{ goteaMessage(`INCREMENT_COUNTER`, 1) }}'>
+        Up
+    </button>
+</div>
+{{ end }}
