@@ -15,10 +15,11 @@ func parseTemplates(dir string) *jet.Set {
 
 func addHelperFunctions(viewSet *jet.Set) {
 	funcs := map[string]interface{}{
-		"goteaMessage": SendMessage,
-		"goteaForm":    SubmitForm,
-		"goteaValue":   SendMessageWithInputValue,
-		"memberString": MemberString,
+		"goteaMessage":  SendMessage,
+		"goteaMessage_": SendMessageNoArgs,
+		"goteaForm":     SubmitForm,
+		"goteaValue":    SendMessageWithInputValue,
+		"memberString":  MemberString,
 	}
 
 	for funcName, f := range funcs {
@@ -30,6 +31,11 @@ func addHelperFunctions(viewSet *jet.Set) {
 
 func SendMessage(msg string, args interface{}) template.JS {
 	s := fmt.Sprintf("gotea.sendMessage('%s', %s)", msg, argsToJSON(args))
+	return template.JS(s)
+}
+
+func SendMessageNoArgs(msg string) template.JS {
+	s := fmt.Sprintf("gotea.sendMessage('%s', null)", msg)
 	return template.JS(s)
 }
 
