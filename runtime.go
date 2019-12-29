@@ -2,6 +2,7 @@ package gotea
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -66,21 +67,14 @@ type Session struct {
 // it gets added to the SessionStore. When a session is closed, it gets removed.
 type SessionStore []*Session
 
-// newSession creates a new session, as outlined above.
-// It assigns the specified websocket connection to the session,
-// sets the initial state by calling a special function that your application needs
-// to provide (more on that later),
-// and adds the session to the session store so we can keep track of it.
-func (app *Application) newSession(r *http.Request, conn *websocket.Conn, path string) *Session {
-	newState := app.newState(r, path)
+func (session *Session) changeRoute(path string) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("Could not run initial route change hook")
+		}
+	}()
 
-	session := Session{
-		State: newState,
-	}
-	session.Conn = conn
-	session.add(app)
-
-	return &session
+	changeRoute(session.State, path)
 }
 
 // add updates the list of active sessions
@@ -235,7 +229,8 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Print("error upgrading connection:", err)
+		app.renderError(w, nil, errors.New("Error upgrading connection"))
+		log.Println("error upgrading connection:", err)
 		return
 	}
 
@@ -248,10 +243,18 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 	r.ParseForm()
 	startingRoute := r.URL.Query().Get("whence")
 
-	// create a new session
+	// create a new session based on the current connection
 	// this will use the state seeder to create a default state
-	session := app.newSession(r, conn, startingRoute)
-	session.render(app, err)
+	session := &Session{
+		Conn:  conn,
+		State: app.newState(r),
+	}
+
+	// we need to run the client supplied route change logic before the first render
+	/// but since it might be fail, we wrap it in error checking so that it can't crash
+	// the runtime
+	session.changeRoute(startingRoute)
+	session.add(app)
 
 	// defer closing the connection and removing it from the session
 	defer session.close(app)
@@ -340,8 +343,13 @@ func (app Application) renderError(w io.Writer, state State, errorToRender error
 }
 
 func (app Application) render(w io.Writer, state State) {
+	templateName, err := state.GetTemplate()
+	if err != nil {
+		app.renderError(w, state, err)
+		return
+	}
 
-	t, err := app.Templates.GetTemplate(state.GetTemplate())
+	t, err := app.Templates.GetTemplate(templateName)
 	if err != nil {
 		app.renderError(w, state, err)
 		return
@@ -395,7 +403,16 @@ func (app *Application) initRouter(router *chi.Mux) {
 
 		// For all other routes, serve index.html
 		router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
-			state := app.newState(r, r.URL.Path)
+			state := app.newState(r)
+
+			// Protect against any errors in the inital route hook
+			defer func() {
+				if r := recover(); r != nil {
+					app.renderError(w, state, errors.New("Gotea crashed while initialising state"))
+				}
+			}()
+
+			changeRoute(state, r.URL.Path)
 			app.render(w, state)
 		})
 	})
@@ -407,16 +424,15 @@ func (app *Application) initRouter(router *chi.Mux) {
 // provided by the calling app.  We also record the original http request
 // and perform a 'route set' which will run any route dependent logic
 // as well as set the starting template.
-func (app Application) newState(r *http.Request, path string) State {
+func (app Application) newState(r *http.Request) State {
 	state := app.Model.Init(r)
 	state.SetOriginalRequest(r)
-	changeRoute(state, path)
 	return state
 }
 
 // Start creates the router, and serves it!
 func (app *Application) Start() {
-	fmt.Printf("Starting application server on %v\n", app.Config.Port)
+	log.Printf("Starting application server on %v\n", app.Config.Port)
 	http.ListenAndServe(fmt.Sprintf(":%v", app.Config.Port), app.Router)
 }
 

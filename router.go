@@ -2,13 +2,14 @@ package gotea
 
 import (
 	"encoding/json"
+	"errors"
 	"net/url"
 )
 
 type Routable interface {
 	SetNewRoute(string)
 	GetRoute() string
-	GetTemplate() string
+	GetTemplate() (string, error)
 	RouteParam(string) string
 
 	// OnRouteChange must be defined by the user.  It is a routing function that determines the template to use as well as any logic to perform based on the route.
@@ -41,8 +42,12 @@ func (r Router) GetRoute() string {
 	return r.Route
 }
 
-func (r Router) GetTemplate() string {
-	return r.TemplateName
+func (r Router) GetTemplate() (string, error) {
+	if r.TemplateName == "" {
+		return "", errors.New("No template has been set")
+	}
+
+	return r.TemplateName, nil
 }
 
 var routingMessages = MessageMap{
