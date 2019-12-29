@@ -70,6 +70,7 @@ func (m Model) Update() gt.MessageMap {
 		teamSelector.UniqueMsgMap(teamSelectorMessages),
 		animationMessages,
 		counterMessages,
+		crashMessages,
 	)
 }
 

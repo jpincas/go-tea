@@ -148,3 +148,8 @@ button.flipcard {
     font-weight: bold;
     margin: 0px 5px;
 }
+
+.crash-button {
+    background-color: red;
+    padding: 20px;
+}

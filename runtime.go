@@ -267,9 +267,20 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 
 		// process inside a go routine so as to not block the runtime loop
 		go func() {
+			// Client handlers could potentially cause all manner of havoc,
+			// with the potential to shutdown the Gotea runtime.
+			// Before processing any messages, which are essentially arbitrary client code,
+			// we'll defer a recoverer which will render a nice error and save the runtime.
+			defer func() {
+				if r := recover(); r != nil {
+					session.render(app, fmt.Errorf("I caught a panic while processing the '%s' message: %s", message.Message, r))
+				}
+			}()
+
 			if err := message.Process(session, app); err != nil {
 				session.render(app, err)
 			}
+
 		}()
 	}
 }
@@ -367,6 +378,7 @@ func NewApp(config AppConfig, model State, router *chi.Mux) *Application {
 
 func (app *Application) initRouter(router *chi.Mux) {
 	router.Route("/", func(router chi.Router) {
+
 		// Attach the w ebsocket handler at /server,
 		router.Get("/server", app.websocketHandler)
 
