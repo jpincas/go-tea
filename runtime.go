@@ -15,27 +15,17 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// The concepts of 'State' and 'Session' are fundamental to gotea.
-
-// State is private to each user (session) and is what is rendered by the runtime on each update.
-// It can essentially be anything  - you just define it as a struct in your application code.
+// State is attached to each 'session' and is what is rendered by the Gotea runtime on each update.
+// It can essentially anything  - you just define it as a struct in your application code.
 // By Elm convention it would be called 'Model', but that's up to you.
 type State interface {
-	// USER DEFINED METHODS
-
 	// Init must be defined by the user and describes the 'blank' state from which a session starts.
-	// It gets passed a pointer to the original http request which might help to set some starting parameters,
-	// but can most often be ignored
+	// It gets passed a pointer to the originating http request which might help to set some starting parameters, but can most often be ignored.
 	Init(r *http.Request) State
 
-	// Update is defined by the user and defines the MessageMap that is used to modify state.
-	// on each loop of the runtime
+	// Update is defined by the user and returns the list of messages that is used to modify state
+	// on each loop of the runtime.
 	Update() MessageMap
-
-	// PROVIDED METHODS
-
-	// SetOriginal request records the original http request on the state for later use if required
-	SetOriginalRequest(*http.Request)
 
 	// Routable provides all the routing functions
 	Routable
@@ -45,11 +35,6 @@ type State interface {
 type BaseModel struct {
 	Router
 	OriginalRequest *http.Request
-}
-
-// SetOriginalRequest records the original http request on the model
-func (b *BaseModel) SetOriginalRequest(request *http.Request) {
-	b.OriginalRequest = request
 }
 
 // Session is just a holder for a websocket connection (or more accurately, a pointer to one),
@@ -417,7 +402,6 @@ func (app *Application) initRouter(router *chi.Mux) {
 // as well as set the starting template.
 func (app Application) newState(r *http.Request) State {
 	state := app.Model.Init(r)
-	state.SetOriginalRequest(r)
 	return state
 }
 
