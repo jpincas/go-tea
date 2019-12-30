@@ -15,6 +15,13 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// BaseModel is embedded in the application model struct to provide client-side routing functionality
+// and possibly more in the future.
+type BaseModel struct {
+	Router
+	OriginalRequest *http.Request
+}
+
 // State is attached to each 'session' and is what is rendered by the Gotea runtime on each update.
 // It can essentially anything  - you just define it as a struct in your application code.
 // By Elm convention it would be called 'Model', but that's up to you.
@@ -31,48 +38,44 @@ type State interface {
 	Routable
 }
 
-// BaseModel should be embedded in the client model
-type BaseModel struct {
-	Router
-	OriginalRequest *http.Request
-}
+// sessionStore tracks a list of active sessions.  When a session is opened,
+// it gets added to the sessionStore. When a session is closed, it gets removed.
+type sessionStore []*session
 
-// Session is just a holder for a websocket connection (or more accurately, a pointer to one),
+// session is a holder for a websocket connection (or more accurately, a pointer to one),
 // and a lump of state (see above).  When a client connects, a new session is opened with a pointer
 // to the websocker connection and the initial state (more on that later)
-type Session struct {
-	Closed bool
-	Conn   *websocket.Conn
-	State  State
+type session struct {
+	session bool
+	conn    *websocket.Conn
+	state   State
 }
 
-// SessionStore tracks a list of active sessions.  When a session is opened,
-// it gets added to the SessionStore. When a session is closed, it gets removed.
-type SessionStore []*Session
-
-func (session *Session) changeRoute(path string) {
+// changeRoute is a wrapper around the route change hook which is unsafe code provided by the calling app.
+// In case it crashes, it won't bring down the Gotea runtime
+func (session *session) changeRoute(path string) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Could not run initial route change hook")
 		}
 	}()
 
-	changeRoute(session.State, path)
+	changeRoute(session.state, path)
 }
 
-// add updates the list of active sessions
-func (session *Session) add(app *Application) {
+// add adds the session to the list of active sessions
+func (session *session) add(app *Application) {
 	app.Sessions = append(app.Sessions, session)
 }
 
-// close does the work of closing a session, including recording on the model that it is about to close,
+// close does the work of closing a session:
 // actually closing the connection, and removing it from the list.
-func (session *Session) close(app *Application) {
+func (session *session) close(app *Application) {
 	log.Println("Closing session")
-	session.Closed = true
-	session.Conn.Close()
+	session.session = true
+	session.conn.Close()
 
-	// remove, as you could expect, just removes the session from the session store.
+	// remove from session store
 	for i, stored := range app.Sessions {
 		if stored == session {
 			// safe delete NOT preserving order
@@ -84,24 +87,25 @@ func (session *Session) close(app *Application) {
 	}
 }
 
-// render takes the session state, runs it through the main view template
+// render takes the session state, runs it through current template
 // and renders it to the socket connection on the session -
 // this is what the client sees in their browser.
 // The JS part of gotea takes this HTML and patches it efficiently onto
 // the existing DOM, so the browser only updates what has actually changed
-func (session *Session) render(app *Application, errorToRender error) {
+func (session *session) render(app *Application, errorToRender error) {
 	// There is no point trying to render a seesion if the message is CLOSE
 	// because logically it will fail
+	// TODO: better close checking required here
 	if websocket.IsCloseError(errorToRender, websocket.CloseGoingAway) {
 		return
 	}
 
-	if session.Conn == nil {
+	if session.conn == nil {
 		log.Println("Could not render, no socket to render to")
 		return
 	}
 
-	w, err := session.Conn.NextWriter(1)
+	w, err := session.conn.NextWriter(1)
 
 	if err != nil {
 		log.Printf("Error opening websocket connection writer: %v\n", err)
@@ -109,9 +113,9 @@ func (session *Session) render(app *Application, errorToRender error) {
 	}
 
 	if errorToRender == nil {
-		app.render(w, session.State)
+		app.render(w, session.state)
 	} else {
-		app.renderError(w, session.State, errorToRender)
+		app.renderError(w, session.state, errorToRender)
 	}
 
 	if err := w.Close(); err != nil {
@@ -121,10 +125,10 @@ func (session *Session) render(app *Application, errorToRender error) {
 }
 
 // Message is a data structure that is triggered in JS in the browser,
-// and send through the open websocket connection to the gotea runtime.
+// and sent through the open websocket connection to the Gotea runtime.
 // It's quite simple and consists of just two pieces of information:
 // 1 - the name of the message (a string)
-// 2 - some optional accompanying data (JSON)
+// 2 - some optional accompanying data (JSON) (can be nil)
 type Message struct {
 	Message   string          `json:"message"`
 	Arguments json.RawMessage `json:"args"`
@@ -132,7 +136,7 @@ type Message struct {
 
 // Response is returned by MessageHandler functions.  The most important part of the
 // response is the new state, but they can optionally return another message to be
-// processed (after an optional delay)
+// processed after an optional delay.
 type Response struct {
 	NextMsg *Message
 	Delay   time.Duration
@@ -148,18 +152,18 @@ type MessageHandler func(json.RawMessage, State) Response
 // The client application must provide this when bootstrapping the app.
 type MessageMap map[string]MessageHandler
 
-// Process does the actual work of dealing with an incoming message.
+// process does the actual work of dealing with an incoming message.
 // It checks to make sure a message handling function is assigned to that message, raising an error if not.
 // Assuming a message handling function is found, it is executed,
 // resulting in a new state.  This new state is set on the session,
 // and any further messages are sent for processing in the same way (recursively).
 // Finally, a render of the new state takes place, sending new HTML down the websocket to the client,
 // and starting the cycle again.
-func (message Message) Process(session *Session, app *Application) error {
+func (message Message) process(session *session, app *Application) error {
 	// Since messages can trigger themselves, they can potentially set off an infinite loop,
-	// which would not be interrupted by the connection closing.  So here we check that the connection is open
-	// before processing the message.
-	if session.Closed {
+	// which would not be interrupted by the connection closing.
+	// So here we check that the connection is open before processing the message.
+	if session.session {
 		return fmt.Errorf("Could not process message %s: connection has been closed", message.Message)
 	}
 
@@ -172,18 +176,17 @@ func (message Message) Process(session *Session, app *Application) error {
 	// some sort of log message if there is a clash of names
 	if !found {
 		// Care to overwrite the funcToExecute variable above
-		funcToExecute, found = app.Messages[message.Message]
+		funcToExecute, found = session.state.Update()[message.Message]
 		if !found {
 			return fmt.Errorf("Could not process message %s: message does not exist", message.Message)
 		}
 	}
 
-	response := funcToExecute(message.Arguments, session.State)
+	response := funcToExecute(message.Arguments, session.state)
 	if response.Error != nil {
 		return response.Error
 	}
 
-	// session.State = response.State
 	session.render(app, nil)
 
 	if response.NextMsg != nil {
@@ -191,7 +194,7 @@ func (message Message) Process(session *Session, app *Application) error {
 			time.Sleep(response.Delay * time.Millisecond)
 		}
 
-		response.NextMsg.Process(session, app)
+		response.NextMsg.process(session, app)
 	}
 
 	return nil
@@ -203,9 +206,9 @@ func (message Message) Process(session *Session, app *Application) error {
 // - creates a new session and adds it to the list of active sessions
 // - waits for a message from the client
 // - sends the messages for processing
-// - waits again
+// - waits again, etc etc
 func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request) {
-	// upgrade the connections
+	// upgrade the connection
 	upgrader := websocket.Upgrader{
 		CheckOrigin: app.Config.CheckOrigin,
 	}
@@ -228,9 +231,9 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 
 	// create a new session based on the current connection
 	// this will use the state seeder to create a default state
-	session := &Session{
-		Conn:  conn,
-		State: app.newState(r),
+	session := &session{
+		conn:  conn,
+		state: app.newState(r),
 	}
 
 	// we need to run the client supplied route change logic before the first render
@@ -242,7 +245,12 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 	// defer closing the connection and removing it from the session
 	defer session.close(app)
 
-	// the main runtime loop
+	// NOTE: we don't actually need to render the session now. Why?
+	// Because the intial HTML render (before the websocket was established) was enough
+	// to perfectly render the initial state.  Rendering it again now would be redundant.
+	// Therefore we wait for some interaction before doing our first render through the websocket.
+
+	// main runtime loop
 	for {
 		// read the incoming message
 		var message Message
@@ -263,7 +271,7 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 				}
 			}()
 
-			if err := message.Process(session, app); err != nil {
+			if err := message.process(session, app); err != nil {
 				session.render(app, err)
 			}
 
@@ -271,15 +279,24 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-// OK, that's pretty much it.
-// All that's left now is to bring all this together and start the server
-
+// AppConfig specifies the configuration for the Gotea app
 type AppConfig struct {
-	Port                                int
-	TemplatesDirectory, StaticDirectory string
-	CheckOrigin                         func(r *http.Request) bool
+	// Port is the port to start the app on when calling Start
+	Port int
+
+	// TemplatesDirectory specifies where to find the Jet templates
+	TemplatesDirectory string
+
+	// StaticDirectory (optional) will set up a convenient static file server on the specified directory
+	// at /static.  If left blank, because you have a more complex setup with your own static file server,
+	// then no static file server will be initiated.
+	StaticDirectory string
+
+	// CheckOrigin is the CORS checking function for websocket upgrade
+	CheckOrigin func(r *http.Request) bool
 }
 
+// DefaultAppConfig provides a set of sane defaults for a Gotea app
 var DefaultAppConfig = AppConfig{
 	Port:               8080,
 	TemplatesDirectory: "templates",
@@ -292,39 +309,25 @@ type Application struct {
 	Config AppConfig
 
 	// Sessions is a list of the current active sessions
-	Sessions SessionStore
+	Sessions sessionStore
 
 	// Templates for rending, provided by the appication
 	Templates *jet.Set
 
+	// The server-side router used to serve the routes Gotea needs to function.
+	// Not to be confused with client-side (app) routing.
 	Router *chi.Mux
 
+	// The client provided state model
 	Model State
-
-	Messages MessageMap
 }
 
-// render is the main render function for the whole app
-// It specifies how to render state.
-
+// write is a helper to actually render to the socket
 func write(w io.Writer, t *jet.Template, state State, vars jet.VarMap) error {
 	return t.Execute(w, vars, state)
 }
 
-func (app Application) renderError(w io.Writer, state State, errorToRender error) {
-	// If no 'error' template has been specified, just write the error
-	t, err := app.Templates.GetTemplate("error")
-	if err != nil {
-		w.Write([]byte(err.Error()))
-		return
-	}
-
-	vars := make(jet.VarMap)
-	vars.Set("Msg", errorToRender.Error())
-
-	write(w, t, state, vars)
-}
-
+// render renders the application state to the socket
 func (app Application) render(w io.Writer, state State) {
 	templateName, err := state.GetTemplate()
 	if err != nil {
@@ -345,15 +348,27 @@ func (app Application) render(w io.Writer, state State) {
 	}
 }
 
-// And finally you are ready to start gotea.
+// renderError is a helper to render error states
+func (app Application) renderError(w io.Writer, state State, errorToRender error) {
+	// If no 'error' template has been specified, just write the error
+	t, err := app.Templates.GetTemplate("error")
+	if err != nil {
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	vars := make(jet.VarMap)
+	vars.Set("Msg", errorToRender.Error())
+
+	write(w, t, state, vars)
+}
 
 // NewApp is used by the calling application to set up a new gotea app
 func NewApp(config AppConfig, model State, router *chi.Mux) *Application {
 	app := Application{
 		Config:    config,
 		Model:     model,
-		Messages:  model.Update(),
-		Sessions:  SessionStore{},
+		Sessions:  sessionStore{},
 		Templates: parseTemplates(config.TemplatesDirectory),
 	}
 
@@ -367,17 +382,18 @@ func NewApp(config AppConfig, model State, router *chi.Mux) *Application {
 	return &app
 }
 
+// initRouter sets upf the server-side routing required by Gotea
 func (app *Application) initRouter(router *chi.Mux) {
 	router.Route("/", func(router chi.Router) {
-		// Attach the websocket handler at /server,
+		// websocket handler
 		router.Get("/server", app.websocketHandler)
 
-		// Attach the static file server if required
+		// static file server if required
 		if app.Config.StaticDirectory != "" {
 			fileServer(router, "/static", http.Dir(app.Config.StaticDirectory))
 		}
 
-		// For all other routes, serve index.html
+		// for all other routes, respond with an html render of state
 		router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
 			state := app.newState(r)
 
@@ -396,9 +412,8 @@ func (app *Application) initRouter(router *chi.Mux) {
 	app.Router = router
 }
 
-// newState bootstraps a new state model according to the init()
-// provided by the calling app.  We also record the original http request
-// and perform a 'route set' which will run any route dependent logic
+// newState bootstraps a new state model according to the init() provided by the calling app.
+// We also perform a 'route set' which will run any route dependent logic
 // as well as set the starting template.
 func (app Application) newState(r *http.Request) State {
 	state := app.Model.Init(r)
@@ -409,19 +424,4 @@ func (app Application) newState(r *http.Request) State {
 func (app *Application) Start() {
 	log.Printf("Starting application server on %v\n", app.Config.Port)
 	http.ListenAndServe(fmt.Sprintf(":%v", app.Config.Port), app.Router)
-}
-
-// That's all the important stuff.
-// There are just a few other odds and ends.
-
-// If your application needs to rerender all active sessions
-// because of some change in global state, there's an easy function for that
-
-// Broadcast re-renders every active session
-func (app *Application) Broadcast() {
-	for _, session := range app.Sessions {
-		if session.Conn != nil {
-			session.render(app, nil)
-		}
-	}
 }
