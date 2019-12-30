@@ -6,7 +6,6 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>{{yield title()}}</title>
     <link rel="stylesheet" href="static/styles.css">
-    <!-- <link href="https://fonts.googleapis.com/css?family=Roboto:400,700" rel="stylesheet"> -->
     <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgo=">
 
 </head>
@@ -42,7 +41,10 @@
         {{yield body()}}
     </div>
 
-    <script src="/gotea.js"></script>
+    <!-- Either serve the built JS from Github -->
+    <script src="https://cdn.jsdelivr.net/gh/jpincas/go-tea/js/dist/gotea.js"></script>
+    <!-- Or for JS development, serve it localy (need to copy from dist to static) -->
+    <!-- <script src="static/js/gotea.js"></script> -->
 </body>
 
 </html>

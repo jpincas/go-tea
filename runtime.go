@@ -386,15 +386,8 @@ func NewApp(config AppConfig, model State, router *chi.Mux) *Application {
 
 func (app *Application) initRouter(router *chi.Mux) {
 	router.Route("/", func(router chi.Router) {
-
-		// Attach the w ebsocket handler at /server,
+		// Attach the websocket handler at /server,
 		router.Get("/server", app.websocketHandler)
-
-		// Serve the gotea JS
-		router.Get("/gotea.js", func(w http.ResponseWriter, _ *http.Request) {
-			w.Header().Set("Content-Type", "application/javascript")
-			w.Write([]byte(goteaJS))
-		})
 
 		// Attach the static file server if required
 		if app.Config.StaticDirectory != "" {
