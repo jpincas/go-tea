@@ -15,8 +15,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-//go:generate hardcode
-
 // The concepts of 'State' and 'Session' are fundamental to gotea.
 
 // State is private to each user (session) and is what is rendered by the runtime on each update.
