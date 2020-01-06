@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -133,5 +135,6 @@ func main() {
 		nil,
 	)
 
-	app.Start()
+	log.Printf("Starting application server on %v\n", app.Config.Port)
+	http.ListenAndServe(fmt.Sprintf(":%v", app.Config.Port), app.Router)
 }
