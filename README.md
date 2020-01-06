@@ -6,7 +6,12 @@
 
 Gotea is a small, experimental library that loosely implements a form of TEA (The Elm Architecture) or a Redux-like system, but in Go, using server-side state, server-rendered HTML, websockets and messages - it lets you create SPA-like applications without having to write a single line of Javascript.  
 
-Since coming up with the idea for Gotea, the Elixir community has introduced 'Liveviews' for Pheonix, which appears to work in much the same way, so it might be worth checking out some of their documentation/talks to get a high-level picture of this type of architecture.
+Since coming up with the idea for Gotea, a few other similar frameworks in other languages/platforms have appeared and in the case of Pheonix LiveView are already quite ewll developed as of Jan 2020.  It might be worth checking out some of their documentation/talks to get a high-level picture of this type of architecture.
+
+- [LiveView for Pheonix](https://hexdocs.pm/phoenix_live_view/Phoenix.LiveView.html)
+- [StimulusReflex for Ruby](https://github.com/hopsoft/stimulus_reflex)
+- [Blazor for .NET](https://dotnet.microsoft.com/apps/aspnet/web-apps/blazor), 
+- [phpx for PHP](https://freek.dev/1254-introducing-phpx-implementing-phoenix-liveview-in-php)
 
 ## Why?
 
