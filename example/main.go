@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"strconv"
 
+	"github.com/CloudyKit/jet"
 	gt "github.com/jpincas/go-tea"
 	"github.com/jpincas/go-tea/example/tagselector"
 )
@@ -18,6 +20,7 @@ const (
 
 type Model struct {
 	gt.BaseModel
+	TemplateName string
 	MemoryGame   MemoryGame
 	NameSelector tagselector.Model
 	TeamSelector tagselector.Model
@@ -89,20 +92,46 @@ func (m *Model) OnRouteChange(path string) {
 	n, _ := strconv.Atoi(param)
 	m.RouteData = rand.Intn((100 * n) + 100)
 
-	m.SetNewTemplate(template)
+	m.TemplateName = template
+}
+
+// Rendering
+
+var templates *jet.Set
+
+func (m Model) Render(w io.Writer) error {
+	t, err := templates.GetTemplate(m.TemplateName)
+	if err != nil {
+		return err
+	}
+
+	vars := make(jet.VarMap)
+	return t.Execute(w, vars, m)
+}
+
+func (m Model) RenderError(w io.Writer, errorToRender error) {
+	t, _ := templates.GetTemplate("error")
+	vars := make(jet.VarMap)
+	vars.Set("Msg", errorToRender.Error())
+	t.Execute(w, vars, m)
 }
 
 func main() {
+	templates = jet.NewHTMLSet("templates")
+	for funcName, f := range gt.TemplateFuncs {
+		templates.AddGlobal(funcName, f)
+	}
+
+	templates.AddGlobal("prettyPrint", func(s interface{}) string {
+		res, _ := json.MarshalIndent(s, "<br />", "<span style='margin-left:15px'></span>")
+		return string(res)
+	})
+
 	app := gt.NewApp(
 		gt.DefaultAppConfig,
 		&Model{},
 		nil,
 	)
-
-	app.Templates.AddGlobal("prettyPrint", func(s interface{}) string {
-		res, _ := json.MarshalIndent(s, "<br />", "<span style='margin-left:15px'></span>")
-		return string(res)
-	})
 
 	app.Start()
 }

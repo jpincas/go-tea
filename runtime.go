@@ -9,17 +9,21 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/CloudyKit/jet"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/gorilla/websocket"
 )
 
-// BaseModel is embedded in the application model struct to provide client-side routing functionality
-// and possibly more in the future.
+// BaseModel is embedded in the application model struct to provide client-side routing and more
 type BaseModel struct {
 	Router
 	OriginalRequest *http.Request
+}
+
+// RenderError is a default error renderer that can be overwritten by the app
+func (b BaseModel) RenderError(w io.Writer, err error) {
+	msg := fmt.Sprintf("Sorry! An error has ocurred.  Please try again or contact the site admin for help.\n\nError details: %s", err)
+	w.Write([]byte(msg))
 }
 
 // State is attached to each 'session' and is what is rendered by the Gotea runtime on each update.
@@ -33,6 +37,12 @@ type State interface {
 	// Update is defined by the user and returns the list of messages that is used to modify state
 	// on each loop of the runtime.
 	Update() MessageMap
+
+	// Render is the view function provided by the user to render out the state
+	Render(io.Writer) error
+
+	// RenderError is an optional error renderer than can be provided by the app
+	RenderError(io.Writer, error)
 
 	// Routable provides all the routing functions
 	Routable
@@ -87,8 +97,7 @@ func (session *session) close(app *Application) {
 	}
 }
 
-// render takes the session state, runs it through current template
-// and renders it to the socket connection on the session -
+// render uses the app-provided render function to send HTML through the socket -
 // this is what the client sees in their browser.
 // The JS part of gotea takes this HTML and patches it efficiently onto
 // the existing DOM, so the browser only updates what has actually changed
@@ -106,16 +115,19 @@ func (session *session) render(app *Application, errorToRender error) {
 	}
 
 	w, err := session.conn.NextWriter(1)
-
 	if err != nil {
 		log.Printf("Error opening websocket connection writer: %v\n", err)
 		return
 	}
 
-	if errorToRender == nil {
-		app.render(w, session.state)
-	} else {
-		app.renderError(w, session.state, errorToRender)
+	// Now we actually start the business of trying to render to the socket.
+	if errorToRender != nil {
+		session.state.RenderError(w, errorToRender)
+		return
+	}
+
+	if renderAttemptErr := session.state.Render(w); renderAttemptErr != nil {
+		session.state.RenderError(w, renderAttemptErr)
 	}
 
 	if err := w.Close(); err != nil {
@@ -215,7 +227,7 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		app.renderError(w, nil, errors.New("Error upgrading connection"))
+		BaseModel{}.RenderError(w, errors.New("Error upgrading connection"))
 		log.Println("error upgrading connection:", err)
 		return
 	}
@@ -285,7 +297,7 @@ type AppConfig struct {
 	Port int
 
 	// TemplatesDirectory specifies where to find the Jet templates
-	TemplatesDirectory string
+	// TemplatesDirectory string
 
 	// StaticDirectory (optional) will set up a convenient static file server on the specified directory
 	// at /static.  If left blank, because you have a more complex setup with your own static file server,
@@ -298,10 +310,9 @@ type AppConfig struct {
 
 // DefaultAppConfig provides a set of sane defaults for a Gotea app
 var DefaultAppConfig = AppConfig{
-	Port:               8080,
-	TemplatesDirectory: "templates",
-	StaticDirectory:    "static",
-	CheckOrigin:        func(_ *http.Request) bool { return true },
+	Port:            8080,
+	StaticDirectory: "static",
+	CheckOrigin:     func(_ *http.Request) bool { return true },
 }
 
 // Application is the holder for all the bits and pieces go-tea needs
@@ -311,9 +322,6 @@ type Application struct {
 	// Sessions is a list of the current active sessions
 	Sessions sessionStore
 
-	// Templates for rending, provided by the appication
-	Templates *jet.Set
-
 	// The server-side router used to serve the routes Gotea needs to function.
 	// Not to be confused with client-side (app) routing.
 	Router *chi.Mux
@@ -322,54 +330,12 @@ type Application struct {
 	Model State
 }
 
-// write is a helper to actually render to the socket
-func write(w io.Writer, t *jet.Template, state State, vars jet.VarMap) error {
-	return t.Execute(w, vars, state)
-}
-
-// render renders the application state to the socket
-func (app Application) render(w io.Writer, state State) {
-	templateName, err := state.GetTemplate()
-	if err != nil {
-		app.renderError(w, state, err)
-		return
-	}
-
-	t, err := app.Templates.GetTemplate(templateName)
-	if err != nil {
-		app.renderError(w, state, err)
-		return
-	}
-
-	vars := make(jet.VarMap)
-	if err = write(w, t, state, vars); err != nil {
-		app.renderError(w, state, err)
-		return
-	}
-}
-
-// renderError is a helper to render error states
-func (app Application) renderError(w io.Writer, state State, errorToRender error) {
-	// If no 'error' template has been specified, just write the error
-	t, err := app.Templates.GetTemplate("error")
-	if err != nil {
-		w.Write([]byte(err.Error()))
-		return
-	}
-
-	vars := make(jet.VarMap)
-	vars.Set("Msg", errorToRender.Error())
-
-	write(w, t, state, vars)
-}
-
 // NewApp is used by the calling application to set up a new gotea app
 func NewApp(config AppConfig, model State, router *chi.Mux) *Application {
 	app := Application{
-		Config:    config,
-		Model:     model,
-		Sessions:  sessionStore{},
-		Templates: parseTemplates(config.TemplatesDirectory),
+		Config:   config,
+		Model:    model,
+		Sessions: sessionStore{},
 	}
 
 	// If user has not passed in a preexisting router, use a new one
@@ -400,12 +366,12 @@ func (app *Application) initRouter(router *chi.Mux) {
 			// Protect against any errors in the inital route hook
 			defer func() {
 				if r := recover(); r != nil {
-					app.renderError(w, state, errors.New("Gotea crashed while initialising state"))
+					state.RenderError(w, errors.New("Gotea crashed while initialising state"))
 				}
 			}()
 
 			changeRoute(state, r.URL.Path)
-			app.render(w, state)
+			state.Render(w)
 		})
 	})
 

@@ -3,31 +3,16 @@ package gotea
 import (
 	"fmt"
 	"html/template"
-
-	"github.com/CloudyKit/jet"
 )
 
-func parseTemplates(dir string) *jet.Set {
-	viewSet := jet.NewHTMLSet(dir)
-	addHelperFunctions(viewSet)
-	return viewSet
-}
-
-func addHelperFunctions(viewSet *jet.Set) {
-	funcs := map[string]interface{}{
-		"goteaMessage":  SendMessage,
-		"goteaMessage_": SendMessageNoArgs,
-		"goteaForm":     SubmitForm,
-		"goteaValue":    SendMessageWithInputValue,
-		"memberString":  MemberString,
-	}
-
-	for funcName, f := range funcs {
-		viewSet.AddGlobal(funcName, f)
-	}
-}
-
 // Gotea message construction helpers
+var TemplateFuncs = map[string]interface{}{
+	"goteaMessage":  SendMessage,
+	"goteaMessage_": SendMessageNoArgs,
+	"goteaForm":     SubmitForm,
+	"goteaValue":    SendMessageWithInputValue,
+	"memberString":  MemberString,
+}
 
 func SendMessage(msg string, args interface{}) template.JS {
 	s := fmt.Sprintf("gotea.sendMessage('%s', %s)", msg, argsToJSON(args))
