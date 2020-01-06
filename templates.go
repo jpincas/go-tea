@@ -2,7 +2,6 @@ package gotea
 
 import (
 	"fmt"
-	"html/template"
 )
 
 // Gotea message construction helpers
@@ -14,24 +13,24 @@ var TemplateFuncs = map[string]interface{}{
 	"memberString":  MemberString,
 }
 
-func SendMessage(msg string, args interface{}) template.JS {
+func SendMessage(msg string, args interface{}) string {
 	s := fmt.Sprintf("gotea.sendMessage('%s', %s)", msg, argsToJSON(args))
-	return template.JS(s)
+	return s
 }
 
-func SendMessageNoArgs(msg string) template.JS {
+func SendMessageNoArgs(msg string) string {
 	s := fmt.Sprintf("gotea.sendMessage('%s', null)", msg)
-	return template.JS(s)
+	return s
 }
 
-func SubmitForm(msg string, formID string) template.JS {
+func SubmitForm(msg string, formID string) string {
 	s := fmt.Sprintf("gotea.submitForm('%s', '%s')", msg, formID)
-	return template.JS(s)
+	return s
 }
 
-func SendMessageWithInputValue(msg string, inputID string) template.JS {
+func SendMessageWithInputValue(msg string, inputID string) string {
 	s := fmt.Sprintf("gotea.sendMessageWithValue('%s', '%s')", msg, inputID)
-	return template.JS(s)
+	return s
 }
 
 func argsToJSON(args interface{}) string {
