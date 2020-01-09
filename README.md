@@ -1,7 +1,5 @@
 # 🍵 Gotea
 
-[Live Demo](https://gotea-264317.appspot.com/)
-
 ### Status: works well, but still experimental, API in constant flux and needs a lot of polishing.  If you're interested in using/helping, probably best to contact me.
 
 ## What?
