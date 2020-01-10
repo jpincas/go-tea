@@ -365,8 +365,9 @@ func (app *Application) initRouter(router *chi.Mux) {
 
 			// Protect against any errors in the inital route hook
 			defer func() {
-				if r := recover(); r != nil {
-					state.RenderError(w, errors.New("Gotea crashed while initialising state"))
+				if rec := recover(); rec != nil {
+					msg := fmt.Errorf("Gotea crashed while initialising state: %s", rec)
+					state.RenderError(w, msg)
 				}
 			}()
 
