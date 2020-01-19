@@ -26,6 +26,8 @@ func (b BaseModel) RenderError(w io.Writer, err error) {
 	w.Write([]byte(msg))
 }
 
+func (b BaseModel) OnConnect() {}
+
 // State is attached to each 'session' and is what is rendered by the Gotea runtime on each update.
 // It can essentially anything  - you just define it as a struct in your application code.
 // By Elm convention it would be called 'Model', but that's up to you.
@@ -33,6 +35,8 @@ type State interface {
 	// Init must be defined by the user and describes the 'blank' state from which a session starts.
 	// It gets passed a pointer to the originating http request which might help to set some starting parameters, but can most often be ignored.
 	Init(r *http.Request) State
+
+	OnConnect()
 
 	// Update is defined by the user and returns the list of messages that is used to modify state
 	// on each loop of the runtime.
@@ -248,6 +252,10 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 		state: app.newState(r),
 	}
 
+	// run any app-specific logic to when the session connects
+	// Im not sure exactly at which point to fire this yet.
+	session.state.OnConnect()
+
 	// we need to run the client supplied route change logic before the first render
 	/// but since it might be fail, we wrap it in error checking so that it can't crash
 	// the runtime
@@ -257,10 +265,13 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 	// defer closing the connection and removing it from the session
 	defer session.close(app)
 
-	// NOTE: we don't actually need to render the session now. Why?
+	// Originally, I didn't actually need to render the session now. Why?
 	// Because the intial HTML render (before the websocket was established) was enough
 	// to perfectly render the initial state.  Rendering it again now would be redundant.
 	// Therefore we wait for some interaction before doing our first render through the websocket.
+	// However, I added the OnConnect() method (see above) which can essentailly do anything once
+	// the client connects, so there state might therefore change, so we probably DO need this render.
+	session.render(app, nil)
 
 	// main runtime loop
 	for {
