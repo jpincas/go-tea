@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"time"
 
+	uuid "github.com/satori/go.uuid"
+
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/gorilla/websocket"
@@ -26,7 +28,7 @@ func (b BaseModel) RenderError(w io.Writer, err error) {
 	w.Write([]byte(msg))
 }
 
-func (b BaseModel) OnConnect() {}
+func (b BaseModel) OnConnect(_ SessionID) {}
 
 // State is attached to each 'session' and is what is rendered by the Gotea runtime on each update.
 // It can essentially anything  - you just define it as a struct in your application code.
@@ -34,9 +36,9 @@ func (b BaseModel) OnConnect() {}
 type State interface {
 	// Init must be defined by the user and describes the 'blank' state from which a session starts.
 	// It gets passed a pointer to the originating http request which might help to set some starting parameters, but can most often be ignored.
-	Init(r *http.Request) State
+	Init(*http.Request) State
 
-	OnConnect()
+	OnConnect(SessionID)
 
 	// Update is defined by the user and returns the list of messages that is used to modify state
 	// on each loop of the runtime.
@@ -54,12 +56,15 @@ type State interface {
 
 // sessionStore tracks a list of active sessions.  When a session is opened,
 // it gets added to the sessionStore. When a session is closed, it gets removed.
-type sessionStore []*session
+type sessionStore map[SessionID]*session
+
+type SessionID = uuid.UUID
 
 // session is a holder for a websocket connection (or more accurately, a pointer to one),
 // and a lump of state (see above).  When a client connects, a new session is opened with a pointer
 // to the websocker connection and the initial state (more on that later)
 type session struct {
+	id      uuid.UUID
 	session bool
 	conn    *websocket.Conn
 	state   State
@@ -79,7 +84,7 @@ func (session *session) changeRoute(path string) {
 
 // add adds the session to the list of active sessions
 func (session *session) add(app *Application) {
-	app.Sessions = append(app.Sessions, session)
+	app.Sessions[session.id] = session
 }
 
 // close does the work of closing a session:
@@ -90,22 +95,14 @@ func (session *session) close(app *Application) {
 	session.conn.Close()
 
 	// remove from session store
-	for i, stored := range app.Sessions {
-		if stored == session {
-			// safe delete NOT preserving order
-			// https://github.com/golang/go/wiki/SliceTricks
-			app.Sessions[i] = app.Sessions[len(app.Sessions)-1]
-			app.Sessions[len(app.Sessions)-1] = nil
-			app.Sessions = app.Sessions[:len(app.Sessions)-1]
-		}
-	}
+	delete(app.Sessions, session.id)
 }
 
 // render uses the app-provided render function to send HTML through the socket -
 // this is what the client sees in their browser.
 // The JS part of gotea takes this HTML and patches it efficiently onto
 // the existing DOM, so the browser only updates what has actually changed
-func (session *session) render(app *Application, errorToRender error) {
+func (session *session) render(errorToRender error) {
 	// There is no point trying to render a seesion if the message is CLOSE
 	// because logically it will fail
 	// TODO: better close checking required here
@@ -203,7 +200,7 @@ func (message Message) process(session *session, app *Application) error {
 		return response.Error
 	}
 
-	session.render(app, nil)
+	session.render(nil)
 
 	if response.NextMsg != nil {
 		if response.Delay > 0 {
@@ -245,16 +242,23 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 	r.ParseForm()
 	startingRoute := r.URL.Query().Get("whence")
 
+	// Session ID
+	id, err := uuid.NewV4()
+	if err != nil {
+		BaseModel{}.RenderError(w, errors.New("Error creating session ID"))
+	}
+
 	// create a new session based on the current connection
 	// this will use the state seeder to create a default state
 	session := &session{
+		id:    id,
 		conn:  conn,
 		state: app.newState(r),
 	}
 
 	// run any app-specific logic to when the session connects
 	// Im not sure exactly at which point to fire this yet.
-	session.state.OnConnect()
+	session.state.OnConnect(session.id)
 
 	// we need to run the client supplied route change logic before the first render
 	/// but since it might be fail, we wrap it in error checking so that it can't crash
@@ -271,14 +275,14 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 	// Therefore we wait for some interaction before doing our first render through the websocket.
 	// However, I added the OnConnect() method (see above) which can essentailly do anything once
 	// the client connects, so there state might therefore change, so we probably DO need this render.
-	session.render(app, nil)
+	session.render(nil)
 
 	// main runtime loop
 	for {
 		// read the incoming message
 		var message Message
 		if err := conn.ReadJSON(&message); err != nil {
-			session.render(app, err)
+			session.render(err)
 			break
 		}
 
@@ -290,12 +294,12 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 			// we'll defer a recoverer which will render a nice error and save the runtime.
 			defer func() {
 				if r := recover(); r != nil {
-					session.render(app, fmt.Errorf("I caught a panic while processing the '%s' message: %s", message.Message, r))
+					session.render(fmt.Errorf("I caught a panic while processing the '%s' message: %s", message.Message, r))
 				}
 			}()
 
 			if err := message.process(session, app); err != nil {
-				session.render(app, err)
+				session.render(err)
 			}
 
 		}()

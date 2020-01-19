@@ -63,7 +63,15 @@ func RespondWithDelayedNextMsg(msg string, args json.RawMessage, delay time.Dura
 func (app *Application) Broadcast() {
 	for _, session := range app.Sessions {
 		if session.conn != nil {
-			session.render(app, nil)
+			session.render(nil)
+		}
+	}
+}
+
+func (app *Application) BroadcastToSessions(sessionIDs []SessionID) {
+	for _, sid := range sessionIDs {
+		if session, ok := app.Sessions[sid]; ok {
+			go session.render(nil)
 		}
 	}
 }
