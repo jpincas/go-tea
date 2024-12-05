@@ -39,13 +39,7 @@ If you prefer to read code, just skim through `runtime.go` which will get you up
 
 ## JS
 
-Go-tea requires a small amount of JS to work - you'll find it in the `js` directory.  Application authors don't have to touch it.  If you do any work on it, you need to rebuild the `dist` directory with `npm run build` and run `go generate` to hardcode the resulting JS into the Go program.
-
-
-Warning: Parcel seems to be a bit messed up when building the example, it can nuke the `package.json` and/or delete Parcel itself from `node_modules`.  Be careful not to check in a nuked `package.json`
-
-Be warned: if you are working on gotea core AND the example, and you make changes to the go-tea core JS, you need to first rebuild that, THEN rebuild the example JS, since it includes the core JS. Clear?
-
+Go-tea requires a small amount of JS to work - you'll find it in the `js` directory.  Application authors don't have to touch it.
 
 ## Routing
 

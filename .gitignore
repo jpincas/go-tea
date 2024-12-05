@@ -7,3 +7,5 @@ js/node_modules
 /example/.cache
 /example/dist
 /example/gotea-example
+
+.parcel-cache

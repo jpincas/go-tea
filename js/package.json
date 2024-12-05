@@ -1,18 +1,14 @@
 {
-  "name": "gotea",
+  "name": "go-tea",
   "version": "1.0.0",
-  "description": "",
+  "description": "JS for the go-tea runtime",
   "main": "gotea.js",
   "scripts": {
-    "start": "parcel gotea.js",
-    "build": "parcel build gotea.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
+  "author": "Jonathan Pincas",
   "license": "ISC",
-  "devDependencies": {
-    "parcel-bundler": "^1.9.7"
-  },
   "dependencies": {
-    "morphdom": "^2.3.3"
+    "morphdom": "^2.7.4"
   }
 }

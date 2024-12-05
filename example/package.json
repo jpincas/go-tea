@@ -1,0 +1,13 @@
+{
+  "name": "go-tea-example",
+  "scripts": {
+    "start": "parcel",
+    "build": "parcel build js/main.js --dist-dir static"
+  },
+  "devDependencies": {
+    "parcel": "^2.13.2"
+  },
+  "dependencies": {
+    "gotea": "file:../js/gotea.js"
+  }
+}

@@ -243,10 +243,7 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 	startingRoute := r.URL.Query().Get("whence")
 
 	// Session ID
-	id, err := uuid.NewV4()
-	if err != nil {
-		BaseModel{}.RenderError(w, errors.New("Error creating session ID"))
-	}
+	id := uuid.NewV4()
 
 	// create a new session based on the current connection
 	// this will use the state seeder to create a default state

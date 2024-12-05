@@ -156,3 +156,11 @@ document.addEventListener(
   },
   false
 );
+
+export default {
+  sendMessage,
+  submitForm,
+  sendMessageWithValue,
+  serializeForm,
+  changeRoute
+};
