@@ -2,12 +2,13 @@
   "name": "go-tea-example",
   "scripts": {
     "start": "parcel",
-    "build": "parcel build js/main.js --dist-dir static"
+    "build": "npm run clean && parcel build js/main.js --no-cache --dist-dir static",
+    "clean": "rm -rf static/*.js static/*.map"
   },
   "devDependencies": {
     "parcel": "^2.13.2"
   },
   "dependencies": {
-    "gotea": "file:../js/gotea.js"
+    "gotea": "file:../js"
   }
 }
