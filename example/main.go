@@ -15,11 +15,6 @@ import (
 	h "github.com/jpincas/htmlfunc/html"
 )
 
-const (
-	animationBackgroundSize = 500
-	animationBallSize       = 20
-)
-
 type Model struct {
 	gt.BaseModel
 	TemplateName string

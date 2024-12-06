@@ -11,6 +11,11 @@ import (
 	h "github.com/jpincas/htmlfunc/html"
 )
 
+const (
+	animationBackgroundSize = 500
+	animationBallSize       = 20
+)
+
 type Animation struct {
 	Stop                     bool
 	X, Y                     int

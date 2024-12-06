@@ -5,15 +5,6 @@ import (
 	"fmt"
 )
 
-// Gotea message construction helpers
-var TemplateFuncs = map[string]interface{}{
-	"goteaMessage":  SendMessage,
-	"goteaMessage_": SendMessageNoArgs,
-	"goteaForm":     SubmitForm,
-	"goteaValue":    SendMessageWithInputValue,
-	"memberString":  MemberString,
-}
-
 func SendMessage(msg string, args interface{}) string {
 	s := fmt.Sprintf(`gotea.sendMessage("%s", %s)`, msg, argsToJSON(args))
 	return s
@@ -45,17 +36,4 @@ func argsToJSON(args interface{}) string {
 	}
 	jsonStr := string(jsonData)
 	return jsonStr
-}
-
-// General Helpers
-
-// MemberString returns whether a target string is a member of a slice of strings
-func MemberString(target string, list []string) bool {
-	for _, member := range list {
-		if member == target {
-			return true
-		}
-	}
-
-	return false
 }
