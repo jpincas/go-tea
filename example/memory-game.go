@@ -2,10 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
+	"strings"
 
 	gt "github.com/jpincas/go-tea"
 	"github.com/jpincas/go-tea/msg"
+	a "github.com/jpincas/htmlfunc/attributes"
+	h "github.com/jpincas/htmlfunc/html"
 )
 
 var memoryGameMessages gt.MessageMap = gt.MessageMap{
@@ -161,4 +165,105 @@ func (deck Deck) reset() {
 		deck[i].Matched = false
 		deck[i].Flipped = false
 	}
+}
+
+// Render
+func (game MemoryGame) render() h.Element {
+	return h.Div(
+		a.Attrs(),
+		h.H2(a.Attrs(), h.Text(fmt.Sprintf("Turns Taken: %d", game.TurnsTaken))),
+		h.H2(a.Attrs(), h.Text(fmt.Sprintf("Pairs Found: %d", game.Score))),
+		h.H2(a.Attrs(), h.Text(fmt.Sprintf("Best Score: %d", game.BestScore))),
+		game.Deck.render(),
+		game.renderStatus(),
+	)
+}
+
+func (game MemoryGame) renderStatus() h.Element {
+	if game.HasWon() {
+		return renderGameWon()
+	}
+	return renderGameOngoing()
+}
+
+func renderGameWon() h.Element {
+	return h.Div(
+		a.Attrs(),
+		h.H2(a.Attrs(), h.Text("Well Done! You Won!")),
+		h.Button(
+			a.Attrs(a.OnClick(gt.SendMessageNoArgs("RESTART_GAME"))),
+			h.Text("New Game"),
+		),
+	)
+}
+
+func renderGameOngoing() h.Element {
+	return h.Div(a.Attrs(), h.Text("Keep going!"))
+}
+
+func (deck Deck) render() h.Element {
+	return h.Div(
+		a.Attrs(a.Id("deck")),
+		func() []h.Element {
+			var elements []h.Element
+			for index, card := range deck {
+				elements = append(elements, card.renderContainer(index))
+			}
+			return elements
+		}()...,
+	)
+}
+
+func (card Card) renderContainer(index int) h.Element {
+	return h.Div(
+		a.Attrs(a.Class("card-container")),
+		card.render(),
+		card.renderFlipButton(index),
+	)
+}
+
+func (card Card) renderFlipButton(index int) h.Element {
+	if !card.Matched {
+		return h.Button(
+			a.Attrs(a.Class("flipcard"), a.OnClick(gt.SendMessage("FLIP_CARD", index))),
+			h.Text("Flip"),
+		)
+	}
+	return h.Nothing(a.Attrs())
+}
+
+func (card Card) render() h.Element {
+	return h.Div(
+		a.Attrs(
+			a.Class(card.getClass()),
+		),
+		h.Span(
+			a.Attrs(a.Class("value")),
+			card.getValue(),
+		),
+	)
+}
+
+func (card Card) getClass() string {
+	classes := []string{"card"}
+	if card.Flipped {
+		classes = append(classes, "faceup")
+	} else {
+		classes = append(classes, "facedown")
+	}
+	if card.Matched {
+		classes = append(classes, "matched")
+	} else {
+		classes = append(classes, "unmatched")
+	}
+
+	// Join with a space
+	return strings.Join(classes, " ")
+}
+
+func (card Card) getValue() h.Element {
+	if card.Flipped {
+		return h.Text(fmt.Sprintf("%d", card.Value))
+	}
+	return h.Nothing(a.Attrs())
 }
