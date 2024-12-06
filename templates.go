@@ -1,6 +1,7 @@
 package gotea
 
 import (
+	"encoding/json"
 	"fmt"
 )
 
@@ -14,44 +15,36 @@ var TemplateFuncs = map[string]interface{}{
 }
 
 func SendMessage(msg string, args interface{}) string {
-	s := fmt.Sprintf("gotea.sendMessage('%s', %s)", msg, argsToJSON(args))
+	s := fmt.Sprintf(`gotea.sendMessage("%s", %s)`, msg, argsToJSON(args))
 	return s
 }
 
 func SendMessageNoArgs(msg string) string {
-	s := fmt.Sprintf("gotea.sendMessage('%s', null)", msg)
+	s := fmt.Sprintf(`gotea.sendMessage("%s", null)`, msg)
 	return s
 }
 
 func SubmitForm(msg string, formID string) string {
-	s := fmt.Sprintf("gotea.submitForm('%s', '%s')", msg, formID)
+	s := fmt.Sprintf(`gotea.submitForm("%s", "%s")`, msg, formID)
 	return s
 }
 
 func SendMessageWithInputValue(msg string, inputID string) string {
-	s := fmt.Sprintf("gotea.sendMessageWithValue('%s', '%s')", msg, inputID)
+	s := fmt.Sprintf(`gotea.sendMessageWithValue("%s", "%s")`, msg, inputID)
 	return s
 }
 
 func argsToJSON(args interface{}) string {
-	switch args.(type) {
-	case int:
-		return fmt.Sprintf("%v", args)
-	case float32:
-		return fmt.Sprintf("%v", args)
-	case float64:
-		return fmt.Sprintf("%v", args)
-	case bool:
-		trueOrFalse := args.(bool)
-		if trueOrFalse {
-			return "true"
-		} else {
-			return "false"
-		}
-	default:
-		// Everything else as a string
-		return fmt.Sprintf(`'"%v"'`, args)
+	if _, isString := args.(string); isString {
+		return fmt.Sprintf(`JSON.stringify("%s")`, args)
 	}
+
+	jsonData, err := json.Marshal(args)
+	if err != nil {
+		return "null"
+	}
+	jsonStr := string(jsonData)
+	return jsonStr
 }
 
 // General Helpers
