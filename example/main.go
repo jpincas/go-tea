@@ -25,6 +25,7 @@ type Model struct {
 	RouteData    int
 	Animation    Animation
 	Counter      int
+	Chat         Chat
 }
 
 func model(s gt.State) *Model {
@@ -59,6 +60,10 @@ func (m Model) Init(_ *http.Request) gt.State {
 			IncrementY:     1,
 		},
 		Counter: 0,
+		Chat: Chat{
+			Username: randomChatUsername(),
+			Messages: &messages,
+		},
 	}
 }
 
@@ -71,6 +76,7 @@ func (m Model) Update() gt.MessageMap {
 		animationMessages,
 		counterMessages,
 		crashMessages,
+		chatMessages,
 	)
 }
 
@@ -118,6 +124,7 @@ func (m Model) Render(w io.Writer) error {
 					h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/components")), h.Text("Components"))),
 					h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/routing")), h.Text("Routing"))),
 					h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/animation")), h.Text("Animation"))),
+					h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/chat")), h.Text("Chat"))),
 					h.Li(a.Attrs(), h.Text(fmt.Sprintf("Current Route: %s", m.BaseModel.Router.Route))),
 				),
 			),
@@ -168,6 +175,8 @@ func (m Model) RenderView() h.Element {
 		return m.renderRouting()
 	case "/animation":
 		return m.Animation.render()
+	case "/chat":
+		return m.Chat.render()
 	default:
 		return renderHome(m.Counter)
 	}
@@ -208,13 +217,13 @@ func (m Model) renderRouting() h.Element {
 	)
 }
 
-func main() {
-	app := gt.NewApp(
-		gt.DefaultAppConfig,
-		&Model{},
-		nil,
-	)
+var app = gt.NewApp(
+	gt.DefaultAppConfig,
+	&Model{},
+	nil,
+)
 
+func main() {
 	log.Printf("Starting application server on %v\n", app.Config.Port)
 	http.ListenAndServe(fmt.Sprintf(":%v", app.Config.Port), app.Router)
 }
