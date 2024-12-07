@@ -4,15 +4,36 @@ import morphdom from "morphdom";
 const SOCKET_MESSAGE = "Sent Message:";
 
 // Websockets
+console.log("Attempting to establish WebSocket connection");
 const socket = new WebSocket(
   `${window.location.protocol === "https:" ? "wss://" : "ws://"}${window.location.host}/server?whence=${document.location.pathname}`
 );
 
 // Handle incoming messages from the server
 socket.onmessage = event => {
+  // console.log("Received message from server:", event.data);
   morphdom(document.documentElement, event.data, {
     childrenOnly: true
   });
+};
+
+// Handle WebSocket open event
+socket.onopen = () => {
+  console.log("WebSocket connection established.");
+};
+
+// Handle WebSocket error event
+socket.onerror = error => {
+  console.error("WebSocket error:", error);
+};
+
+// Handle WebSocket close event
+socket.onclose = event => {
+  if (event.wasClean) {
+    console.log(`WebSocket connection closed cleanly, code=${event.code}, reason=${event.reason}`);
+  } else {
+    console.error("WebSocket connection closed unexpectedly, code=", event.code, "reason=", event.reason);
+  }
 };
 
 // Send a message through the websocket

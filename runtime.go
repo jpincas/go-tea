@@ -1,6 +1,7 @@
 package gotea
 
 import (
+	"compress/flate"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -90,9 +91,11 @@ func (session *session) add(app *Application) {
 // close does the work of closing a session:
 // actually closing the connection, and removing it from the list.
 func (session *session) close(app *Application) {
-	log.Println("Closing session")
+	log.Printf("Closing session %s", session.id)
 	session.session = true
-	session.conn.Close()
+	if err := session.conn.Close(); err != nil {
+		log.Printf("Error closing WebSocket connection: %v", err)
+	}
 
 	// remove from session store
 	delete(app.Sessions, session.id)
@@ -221,17 +224,25 @@ func (message Message) process(session *session, app *Application) error {
 // - sends the messages for processing
 // - waits again, etc etc
 func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request) {
-	// upgrade the connection
+	log.Println("Attempting to upgrade connection to WebSocket")
+
+	// upgrade the connection without permessage-deflate compression
 	upgrader := websocket.Upgrader{
-		CheckOrigin: app.Config.CheckOrigin,
+		EnableCompression: true,
+		CheckOrigin:       app.Config.CheckOrigin,
 	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		BaseModel{}.RenderError(w, errors.New("Error upgrading connection"))
-		log.Println("error upgrading connection:", err)
+		log.Println("Error upgrading connection:", err)
+		BaseModel{}.RenderError(w, errors.New("error upgrading connection"))
 		return
 	}
+
+	conn.EnableWriteCompression(true)
+	conn.SetCompressionLevel(flate.BestSpeed)
+
+	log.Println("WebSocket connection upgraded successfully")
 
 	// The session needs to know which route it is starting from,
 	// else the first template render will fail.
@@ -279,6 +290,7 @@ func (app *Application) websocketHandler(w http.ResponseWriter, r *http.Request)
 		// read the incoming message
 		var message Message
 		if err := conn.ReadJSON(&message); err != nil {
+			log.Printf("Error reading JSON message: %v", err)
 			session.render(err)
 			break
 		}
