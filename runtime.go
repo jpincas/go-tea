@@ -8,7 +8,12 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/olahol/melody"
+)
+
+const (
+	melodyStateKey = "state"
 )
 
 // ROUTING
@@ -80,7 +85,7 @@ type State interface {
 	Routable
 
 	// Init must be defined by the user and describes the 'blank' state from which a session starts.
-	Init() State
+	Init(uuid.UUID) State
 
 	// Update is defined by the user and returns the list of messages that is used to modify state
 	Update() MessageMap
@@ -92,8 +97,18 @@ type State interface {
 
 // onConnect is the Melody handler that is called when a new session is established
 // It is responsible for setting up the initial state of the session, including routing
-func onConnect(state State) func(s *melody.Session) {
+func onConnect(model State) func(s *melody.Session) {
 	return func(s *melody.Session) {
+		// We need to get the session id from the cookie
+		cookie, err := s.Request.Cookie("session_id")
+		if err != nil {
+			log.Printf("Error getting session ID from cookie: %v", err)
+			return
+		}
+
+		// Set the session ID on the state
+		state := model.Init(uuid.MustParse(cookie.Value))
+
 		// We can't just use the path from the URL, since the websocket
 		// connection is always through /server.
 		// Therefore, the JS adds a ?whence=route parameter to /server
@@ -101,7 +116,8 @@ func onConnect(state State) func(s *melody.Session) {
 		s.Request.ParseForm()
 		startingRoute := s.Request.URL.Query().Get("whence")
 		changeRoute(state, startingRoute)
-		s.Set("state", state)
+
+		s.Set(melodyStateKey, state)
 	}
 }
 
@@ -190,7 +206,7 @@ func MergeMaps(msgMaps ...MessageMap) MessageMap {
 // handleMessage is the Melody handler that is called when a websocket message is received
 // In gotea, all it does is retrieve the state from the session, and then pass the message processor
 func handleMessage(s *melody.Session, msg []byte) {
-	st, _ := s.Get("state")
+	st, _ := s.Get(melodyStateKey)
 	state := st.(State)
 
 	var message Message
@@ -271,7 +287,7 @@ type Application struct {
 // - and attach the connection and message handlers
 func NewApp(model State) *Application {
 	melody := melody.New()
-	melody.HandleConnect(onConnect(model.Init()))
+	melody.HandleConnect(onConnect(model))
 	melody.HandleMessage(handleMessage)
 
 	return &Application{
@@ -294,7 +310,24 @@ func (app *Application) Start(port int, staticDirectory string) {
 	http.Handle(staticDirectoryWithBothSlashes, http.StripPrefix(staticDirectoryWithBothSlashes, fs))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		state := app.Model.Init()
+		// Check for session cookie
+		cookie, err := r.Cookie("session_id")
+		var sessionID string
+		if err != nil || cookie.Value == "" {
+			// Create a new session ID if not present
+			sessionID = uuid.New().String()
+			http.SetCookie(w, &http.Cookie{
+				Name:    "session_id",
+				Value:   sessionID,
+				Expires: time.Now().Add(24 * time.Hour),
+			})
+			log.Printf("New session created with ID: %s", sessionID)
+		} else {
+			sessionID = cookie.Value
+			log.Printf("Existing session found with ID: %s", sessionID)
+		}
+
+		state := app.Model.Init(uuid.MustParse(sessionID))
 		changeRoute(state, r.URL.Path)
 		w.Write(state.Render())
 	})

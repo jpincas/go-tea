@@ -5,14 +5,19 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	gt "github.com/jpincas/go-tea"
 	"github.com/jpincas/go-tea/msg"
 	a "github.com/jpincas/htmlfunc/attributes"
 	h "github.com/jpincas/htmlfunc/html"
 )
 
+var usernames = make(map[uuid.UUID]string)
+var messages []Message
+
 var chatMessages gt.MessageMap = gt.MessageMap{
 	"SEND_MESSAGE": SendMessage,
+	"SET_USERNAME": SetUsername,
 }
 
 type Chat struct {
@@ -26,14 +31,23 @@ type Message struct {
 	Text      string
 }
 
-var messages []Message
-
-func randomChatUsername() string {
-	return fmt.Sprintf("User%d", time.Now().Unix())
-}
-
 func (chat *Chat) AddMessage(message Message) {
 	messages = append(messages, message)
+}
+
+func SetUsername(args json.RawMessage, s gt.State) gt.Response {
+	state := model(s)
+
+	input, err := msg.DecodeString(args)
+	if err != nil {
+		return gt.RespondWithError(err)
+	}
+
+	// Cache the username against the sid so we can use it in init
+	usernames[state.sessionID] = input
+	state.Chat.Username = input
+
+	return gt.Respond()
 }
 
 func SendMessage(args json.RawMessage, s gt.State) gt.Response {
@@ -46,7 +60,7 @@ func SendMessage(args json.RawMessage, s gt.State) gt.Response {
 
 	messages = append(messages, Message{
 		TimeStamp: time.Now(),
-		User:      state.Chat.Username,
+		User:      usernames[state.sessionID],
 		Text:      input,
 	})
 
@@ -59,6 +73,15 @@ func (chat Chat) render() h.Element {
 	return h.Div(
 		a.Attrs(),
 		h.H2(a.Attrs(), h.Text("Chat Room")),
+		h.Div(
+			a.Attrs(),
+			h.Label(a.Attrs(a.For("usernameInput")), h.Text("Enter your username:")),
+			h.Input(a.Attrs(a.Type("text"), a.Id("usernameInput"), a.Value(chat.Username), a.Class("username-input"))),
+			h.Button(
+				a.Attrs(a.OnClick(gt.SendMessageWithInputValue("SET_USERNAME", "usernameInput")), a.Class("set-username-button")),
+				h.Text("Set Username"),
+			),
+		),
 		h.Div(
 			a.Attrs(a.Id("messages")),
 			func() []h.Element {

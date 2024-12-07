@@ -6,6 +6,9 @@ require github.com/jpincas/htmlfunc v0.0.0-00010101000000-000000000000 // Add th
 
 replace github.com/jpincas/htmlfunc => ../htmlfunc // Move this line outside of the require block
 
-require github.com/olahol/melody v1.2.1
+require (
+	github.com/google/uuid v1.6.0
+	github.com/olahol/melody v1.2.1
+)
 
 require github.com/gorilla/websocket v1.5.0 // indirect

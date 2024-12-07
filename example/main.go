@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/google/uuid"
 	gt "github.com/jpincas/go-tea"
 	"github.com/jpincas/go-tea/example/tagselector"
 	a "github.com/jpincas/htmlfunc/attributes"
@@ -14,6 +15,7 @@ import (
 
 type Model struct {
 	gt.Router
+	sessionID uuid.UUID
 
 	TemplateName string
 	MemoryGame   MemoryGame
@@ -30,8 +32,9 @@ func model(s gt.State) *Model {
 	return s.(*Model)
 }
 
-func (m Model) Init() gt.State {
+func (m Model) Init(sid uuid.UUID) gt.State {
 	return &Model{
+		sessionID: sid,
 		MemoryGame: MemoryGame{
 			Deck:              NewDeck(4),
 			TurnsTaken:        0,
@@ -58,7 +61,7 @@ func (m Model) Init() gt.State {
 		},
 		Counter: 0,
 		Chat: Chat{
-			Username: randomChatUsername(),
+			Username: usernames[sid],
 			Messages: &messages,
 		},
 	}
@@ -123,6 +126,7 @@ func (m Model) Render() []byte {
 					h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/animation")), h.Text("Animation"))),
 					h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/chat")), h.Text("Chat"))),
 					h.Li(a.Attrs(), h.Text(fmt.Sprintf("Current Route: %s", m.Router.Route))),
+					h.Li(a.Attrs(), h.Text(fmt.Sprintf("SID: %s", m.sessionID.String()))),
 				),
 			),
 			h.Div(a.Attrs(a.Id("view")), m.RenderView()),
