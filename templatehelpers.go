@@ -5,6 +5,9 @@ import (
 	"fmt"
 )
 
+// These functions are intended to be used by templates
+// when constructing the JS messages that are sent from the browser
+
 func SendMessage(msg string, args interface{}) string {
 	s := fmt.Sprintf(`gotea.sendMessage("%s", %s)`, msg, argsToJSON(args))
 	return s

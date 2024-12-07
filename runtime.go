@@ -5,45 +5,107 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/olahol/melody"
 )
 
-// BaseModel is embedded in the application model struct to provide client-side routing and more
-type BaseModel struct {
-	Router
-	OriginalRequest *http.Request
+// ROUTING
+
+// Router is embedded by the application model to provide routing functionality
+type Router struct {
+	Route string
 }
 
-// State is attached to each 'session' and is what is rendered by the Gotea runtime on each update.
+func (r *Router) SetNewRoute(route string) {
+	r.Route = route
+}
+
+func (r Router) RouteParam(param string) string {
+	rel, err := url.Parse(r.Route)
+	if err != nil {
+		return ""
+	}
+
+	return rel.Query().Get(param)
+}
+
+func (r Router) GetRoute() string {
+	return r.Route
+}
+
+// Routable will be fulfilled by the applicaiton model by embedding the Router
+// and defining the OnRouteChange function
+type Routable interface {
+	// These methods are fulfilled just by embedding the Router struct
+	SetNewRoute(string)
+	GetRoute() string
+	RouteParam(string) string
+
+	// OnRouteChange must be defined by the user.  It is a routing function that determines the template to use as well as any logic to perform based on the route.
+	OnRouteChange(string)
+}
+
+// Messages relating to routing that will be merged into the main message map
+var routingMessages = MessageMap{
+	"CHANGE_ROUTE": changeRouteMsgHandler,
+}
+
+// changeRouteMsgHandler is the built in message handler which is fired when a
+// navigation event is detected
+func changeRouteMsgHandler(args json.RawMessage, state State) Response {
+	var newRoute string
+	if err := json.Unmarshal(args, &newRoute); err != nil {
+		return RespondWithError(err)
+	}
+
+	changeRoute(state, newRoute)
+	return Respond()
+}
+
+// changeRoute is fired both by the route change message handler and on establishment
+// of a new state blob.  It fires the app-provided routing logic and sets the new route /// on the model.
+func changeRoute(state State, newRoute string) {
+	state.OnRouteChange(newRoute)
+	state.SetNewRoute(newRoute)
+}
+
+// STATE
+
+// State is attached to each session and is what is rendered by the Gotea runtime on each update.
 // It can essentially anything  - you just define it as a struct in your application code.
 // By Elm convention it would be called 'Model', but that's up to you.
 type State interface {
+	Routable
+
 	// Init must be defined by the user and describes the 'blank' state from which a session starts.
-	// It gets passed a pointer to the originating http request which might help to set some starting parameters, but can most often be ignored.
-	Init(*http.Request) State
+	Init() State
 
 	// Update is defined by the user and returns the list of messages that is used to modify state
-	// on each loop of the runtime.
 	Update() MessageMap
 
-	// Render is the view function provided by the user to render out the state
+	// Render and RenderError are the view functions provided by the user to render out the state
 	Render() []byte
-
-	// Routable provides all the routing functions
-	Routable
+	RenderError(error) []byte
 }
 
-// render uses the app-provided render function to send HTML through the socket -
-// this is what the client sees in their browser.
-// The JS part of gotea takes this HTML and patches it efficiently onto
-// the existing DOM, so the browser only updates what has actually changed
-func renderState(s *melody.Session) {
-	st, _ := s.Get("state")
-	state := st.(State)
-	s.Write(state.Render())
+// onConnect is the Melody handler that is called when a new session is established
+// It is responsible for setting up the initial state of the session, including routing
+func onConnect(state State) func(s *melody.Session) {
+	return func(s *melody.Session) {
+		// We can't just use the path from the URL, since the websocket
+		// connection is always through /server.
+		// Therefore, the JS adds a ?whence=route parameter to /server
+		// when making the connection, so we get the starting route from there
+		s.Request.ParseForm()
+		startingRoute := s.Request.URL.Query().Get("whence")
+		changeRoute(state, startingRoute)
+		s.Set("state", state)
+	}
 }
+
+// MESSAGE HANDLING
 
 // Message is a data structure that is triggered in JS in the browser,
 // and sent through the open websocket connection to the Gotea runtime.
@@ -64,8 +126,46 @@ type Response struct {
 	Error   error
 }
 
-// MessageHandler functions can do absolutely anything as long as they return a new state.
+// Here are a bunch of helper functions to create Responses
+
+// Respond is the basic message response when no error has ocurred and no subsequent messages are required.
+func Respond() Response {
+	return Response{
+		NextMsg: nil,
+		Delay:   0,
+		Error:   nil,
+	}
+}
+
+// Respond with error responds with an error message
+func RespondWithError(err error) Response {
+	return Response{
+		NextMsg: nil,
+		Delay:   0,
+		Error:   err,
+	}
+}
+
+// RespondWithNextMessage responds and queues up another message with 0 delay
+func RespondWithNextMsg(msg string, args json.RawMessage) Response {
+	return RespondWithDelayedNextMsg(msg, args, 0)
+}
+
+// RespondWithNextMessage responds and queues up another message with a delay of N milliseconds
+func RespondWithDelayedNextMsg(msg string, args json.RawMessage, delay time.Duration) Response {
+	return Response{
+		NextMsg: &Message{
+			Message:   msg,
+			Arguments: args,
+		},
+		Delay: delay,
+		Error: nil,
+	}
+}
+
+// MessageHandler functions are the functions that are called when a message is received.
 // Typically they would be used to make some sort of mutation to the state.
+// They can also return a new message to be processed, and optionally a delay.
 type MessageHandler func(json.RawMessage, State) Response
 
 // MessageMap holds a record of MessageHandler functions keyed against message.
@@ -73,25 +173,49 @@ type MessageHandler func(json.RawMessage, State) Response
 // The client application must provide this when bootstrapping the app.
 type MessageMap map[string]MessageHandler
 
+// MergeMaps is a helper that combines several message maps into one
+// This is useful for splitting up the message handling functions into separate files
+func MergeMaps(msgMaps ...MessageMap) MessageMap {
+	startMap := MessageMap{}
+
+	for _, thisMap := range msgMaps {
+		for k, v := range thisMap {
+			startMap[k] = v
+		}
+	}
+
+	return startMap
+}
+
+// handleMessage is the Melody handler that is called when a websocket message is received
+// In gotea, all it does is retrieve the state from the session, and then pass the message processor
+func handleMessage(s *melody.Session, msg []byte) {
+	st, _ := s.Get("state")
+	state := st.(State)
+
+	var message Message
+	if err := json.Unmarshal(msg, &message); err != nil {
+		s.Write(state.RenderError(err))
+		return
+	}
+
+	if err := message.process(s, state); err != nil {
+		s.Write(state.RenderError(err))
+		return
+	}
+}
+
 // process does the actual work of dealing with an incoming message.
 // It checks to make sure a message handling function is assigned to that message, raising an error if not.
-// Assuming a message handling function is found, it is executed,
-// resulting in a new state.  This new state is set on the session,
-// and any further messages are sent for processing in the same way (recursively).
-// Finally, a render of the new state takes place, sending new HTML down the websocket to the client,
-// and starting the cycle again.
-func (message Message) process(s *melody.Session) error {
+// Assuming a message handling function is found, it is executed and the new state is rendered
+// Any further messages are sent for processing in the same way (recursively).
+func (message Message) process(s *melody.Session, state State) error {
 	// Since messages can trigger themselves, they can potentially set off an infinite loop,
 	// which would not be interrupted by the connection closing.
 	// So here we check that the connection is open before processing the message.
 	if s.IsClosed() {
 		return fmt.Errorf("Could not process message %s: connection has been closed", message.Message)
 	}
-
-	log.Println("Processing message: ", message.Message)
-
-	st, _ := s.Get("state")
-	state := st.(State)
 
 	// Try system messages first.
 	// At the moment, just the router, but could expand
@@ -108,140 +232,83 @@ func (message Message) process(s *melody.Session) error {
 		}
 	}
 
+	// Execute the message handler function and get the response
 	response := funcToExecute(message.Arguments, state)
 	if response.Error != nil {
 		return response.Error
 	}
 
-	renderState(s)
+	// Now we can render the new state
+	s.Write(state.Render())
 
+	// If there is a next message, we process it
+	// Note: this must happen in a go routine to unblock this session from receiving further messages
 	if response.NextMsg != nil {
 		go func() {
 			if response.Delay > 0 {
 				time.Sleep(response.Delay * time.Millisecond)
 			}
 
-			response.NextMsg.process(s)
+			response.NextMsg.process(s, state)
 		}()
 	}
 
 	return nil
 }
 
-// websocketHandler is the handler function called when a client connects.
-// It is basically the core of the runtime.  Here's what it does:
-// - upgrades the connection to a websocket
-// - creates a new session and adds it to the list of active sessions
-// - waits for a message from the client
-// - sends the messages for processing
-// - waits again, etc etc
-func (app Application) onConnect(s *melody.Session) {
-	// The session needs to know which route it is starting from,
-	// else the first template render will fail.
-	// We can't just use the path from the URL, since the websocket
-	// connection is always through /server.
-	// Therefore, the JS adds a ?whence=route parameter to /server
-	// when making the connection, so we get the starting route from there
-	s.Request.ParseForm()
-	startingRoute := s.Request.URL.Query().Get("whence")
-	state := app.newState(s.Request)
+// APPLICATION
 
-	// run any app-specific logic to when the session connects
-	// Im not sure exactly at which point to fire this yet.
-	// state.OnConnect(s.)
-
-	// we need to run the client supplied route change logic before the first render
-	/// but since it might be fail, we wrap it in error checking so that it can't crash
-	// the runtime
-	changeRoute(state, startingRoute)
-
-	// Originally, I didn't actually need to render the session now. Why?
-	// Because the intial HTML render (before the websocket was established) was enough
-	// to perfectly render the initial state.  Rendering it again now would be redundant.
-	// Therefore we wait for some interaction before doing our first render through the websocket.
-	// However, I added the OnConnect() method (see above) which can essentailly do anything once
-	// the client connects, so there state might therefore change, so we probably DO need this render.
-	// session.render(nil)
-
-	s.Set("state", state)
-}
-
-func handleMessage(s *melody.Session, msg []byte) {
-	var message Message
-	if err := json.Unmarshal(msg, &message); err != nil {
-		log.Printf("Error unmarshalling JSON message: %v", err)
-		return
-	}
-
-	message.process(s)
-}
-
-// AppConfig specifies the configuration for the Gotea app
-type AppConfig struct {
-	// Port is the port to start the app on when calling Start
-	Port int
-
-	// StaticDirectory (optional) will set up a convenient static file server on the specified directory
-	// at /static.  If left blank, because you have a more complex setup with your own static file server,
-	// then no static file server will be initiated.
-	StaticDirectory string
-}
-
-// DefaultAppConfig provides a set of sane defaults for a Gotea app
-var DefaultAppConfig = AppConfig{
-	Port:            8080,
-	StaticDirectory: "static",
-}
-
-// Application is the holder for all the bits and pieces go-tea needs
+// Application is the holder for
+// - the Melody instance
+// - the template for creating new state
 type Application struct {
 	*melody.Melody
-
-	Config AppConfig
-
-	// The client provided state model
 	Model State
 }
 
 // NewApp is used by the calling application to set up a new gotea app
-func NewApp(config AppConfig, model State) *Application {
-	app := Application{
-		Melody: melody.New(),
-		Config: config,
+// - sets up a new Melody instance
+// - and attach the connection and message handlers
+func NewApp(model State) *Application {
+	melody := melody.New()
+	melody.HandleConnect(onConnect(model.Init()))
+	melody.HandleMessage(handleMessage)
+
+	return &Application{
+		Melody: melody,
 		Model:  model,
 	}
-
-	app.Melody.HandleConnect(app.onConnect)
-	app.Melody.HandleMessage(handleMessage)
-
-	return &app
 }
 
-// newState bootstraps a new state model according to the init() provided by the calling app.
-// We also perform a 'route set' which will run any route dependent logic
-// as well as set the starting template.
-func (app Application) newState(r *http.Request) State {
-	state := app.Model.Init(r)
-	return state
-}
-
-// Start creates the router, and serves it!
-func (app *Application) Start() {
+// Starts the application on a specified port
+// - serves the websocket connection endpoint
+// - serves static files from the specified directory
+// - initial render for all other routes
+func (app *Application) Start(port int, staticDirectory string) {
 	http.HandleFunc("/server", func(w http.ResponseWriter, r *http.Request) {
 		app.Melody.HandleRequest(w, r)
 	})
 
-	if app.Config.StaticDirectory != "" {
-		fs := http.FileServer(http.Dir(app.Config.StaticDirectory))
-		http.Handle("/static/", http.StripPrefix("/static/", fs))
-	}
+	staticDirectoryWithBothSlashes := fmt.Sprintf("/%v/", staticDirectory)
+	fs := http.FileServer(http.Dir(staticDirectory))
+	http.Handle(staticDirectoryWithBothSlashes, http.StripPrefix(staticDirectoryWithBothSlashes, fs))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		state := app.newState(r)
+		state := app.Model.Init()
 		changeRoute(state, r.URL.Path)
 		w.Write(state.Render())
 	})
 
-	log.Printf("Starting application server on %v\n", app.Config.Port)
-	http.ListenAndServe(fmt.Sprintf(":%v", app.Config.Port), nil)
+	log.Printf("Starting application server on %v\n", port)
+	http.ListenAndServe(fmt.Sprintf(":%v", port), nil)
+}
+
+// Broadcast rerenders all sessions
+func (app *Application) Broadcast() {
+	sessions, _ := app.Melody.Sessions()
+	for _, s := range sessions {
+		st, _ := s.Get("state")
+		state := st.(State)
+		s.Write(state.Render())
+	}
 }

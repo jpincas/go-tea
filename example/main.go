@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"net/http"
 	"net/url"
 	"strconv"
 
@@ -14,7 +13,8 @@ import (
 )
 
 type Model struct {
-	gt.BaseModel
+	gt.Router
+
 	TemplateName string
 	MemoryGame   MemoryGame
 	NameSelector tagselector.Model
@@ -30,9 +30,8 @@ func model(s gt.State) *Model {
 	return s.(*Model)
 }
 
-func (m Model) Init(_ *http.Request) gt.State {
+func (m Model) Init() gt.State {
 	return &Model{
-		BaseModel: gt.BaseModel{},
 		MemoryGame: MemoryGame{
 			Deck:              NewDeck(4),
 			TurnsTaken:        0,
@@ -123,7 +122,7 @@ func (m Model) Render() []byte {
 					h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/routing")), h.Text("Routing"))),
 					h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/animation")), h.Text("Animation"))),
 					h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/chat")), h.Text("Chat"))),
-					h.Li(a.Attrs(), h.Text(fmt.Sprintf("Current Route: %s", m.BaseModel.Router.Route))),
+					h.Li(a.Attrs(), h.Text(fmt.Sprintf("Current Route: %s", m.Router.Route))),
 				),
 			),
 			h.Div(a.Attrs(a.Id("view")), m.RenderView()),
@@ -132,6 +131,10 @@ func (m Model) Render() []byte {
 	)
 
 	return el.Bytes()
+}
+
+func (m Model) RenderError(err error) []byte {
+	return []byte(fmt.Sprintf("An error occurred: %s", err.Error()))
 }
 
 func (m Model) RenderView() h.Element {
@@ -190,11 +193,8 @@ func (m Model) renderRouting() h.Element {
 	)
 }
 
-var app = gt.NewApp(
-	gt.DefaultAppConfig,
-	&Model{},
-)
+var app = gt.NewApp(&Model{})
 
 func main() {
-	app.Start()
+	app.Start(8080, "static")
 }
