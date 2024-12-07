@@ -11,7 +11,7 @@ const socket = new WebSocket(
 
 // Handle incoming messages from the server
 socket.onmessage = event => {
-  // console.log("Received message from server:", event.data);
+  console.log("Received rerender from server");
   morphdom(document.documentElement, event.data, {
     childrenOnly: true
   });

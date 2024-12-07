@@ -14,6 +14,7 @@ import (
 const (
 	animationBackgroundSize = 500
 	animationBallSize       = 20
+	animationFrameDelay     = 33
 )
 
 type Animation struct {
@@ -26,16 +27,22 @@ type Animation struct {
 }
 
 var animationMessages gt.MessageMap = gt.MessageMap{
-	"START_ANIMATION": StartAnimation,
-	"STOP_ANIMATION":  StopAnimation,
-	"RESET_ANIMATION": ResetAnimation,
+	"START_ANIMATION":      StartAnimation,
+	"NEXT_ANIMATION_FRAME": NextAnimationFrame,
+	"STOP_ANIMATION":       StopAnimation,
+	"RESET_ANIMATION":      ResetAnimation,
 }
 
 func StartAnimation(_ json.RawMessage, s gt.State) gt.Response {
 	state := model(s)
+	state.Animation.Stop = false
+	return gt.RespondWithDelayedNextMsg("NEXT_ANIMATION_FRAME", nil, animationFrameDelay)
+}
+
+func NextAnimationFrame(_ json.RawMessage, s gt.State) gt.Response {
+	state := model(s)
 
 	if state.Animation.Stop {
-		state.Animation.Stop = false
 		return gt.Respond()
 	}
 
@@ -70,10 +77,11 @@ func StartAnimation(_ json.RawMessage, s gt.State) gt.Response {
 	state.Animation.TranslateX = translate(state.Animation.X, state.Animation.BackgroundSize, state.Animation.BallSize)
 	state.Animation.TranslateY = translate(state.Animation.Y, state.Animation.BackgroundSize, state.Animation.BallSize)
 
-	return gt.RespondWithDelayedNextMsg("START_ANIMATION", nil, 33)
+	return gt.RespondWithDelayedNextMsg("NEXT_ANIMATION_FRAME", nil, animationFrameDelay)
 }
 
 func StopAnimation(_ json.RawMessage, s gt.State) gt.Response {
+	fmt.Println("stopping")
 	state := model(s)
 	state.Animation.Stop = true
 	return gt.Respond()

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -99,7 +98,7 @@ func (m *Model) OnRouteChange(path string) {
 
 // Rendering
 
-func (m Model) Render(w io.Writer) error {
+func (m Model) Render() []byte {
 	el := h.Html(
 		a.Attrs(a.Lang("en")),
 		h.Head(
@@ -132,32 +131,7 @@ func (m Model) Render(w io.Writer) error {
 		),
 	)
 
-	return el.Write(w)
-}
-
-func (m Model) RenderError(w io.Writer, errorToRender error) {
-	el := h.Html(
-		a.Attrs(a.Lang("en")),
-		h.Head(
-			a.Attrs(),
-			h.Meta(a.Attrs(a.Charset("UTF-8"))),
-			h.Meta(a.Attrs(a.Name("viewport"), a.Content("width=device-width, initial-scale=1.0"))),
-			h.Meta(a.Attrs(a.HttpEquiv("X-UA-Compatible"), a.Content("ie=edge"))),
-			h.Title(a.Attrs(), h.Text("Error")),
-			h.Link(a.Attrs(a.Rel("stylesheet"), a.Href("static/styles.css"))),
-		),
-		h.Body(
-			a.Attrs(),
-			h.Div(
-				a.Attrs(a.Class("error-container")),
-				h.H1(a.Attrs(), h.Text("An Error Occurred")),
-				h.P(a.Attrs(), h.Text(errorToRender.Error())),
-				h.A(a.Attrs(a.Href("/")), h.Text("Go back to Home")),
-			),
-		),
-	)
-
-	el.WriteDoc(w)
+	return el.Bytes()
 }
 
 func (m Model) RenderView() h.Element {

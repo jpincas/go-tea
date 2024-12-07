@@ -10,4 +10,7 @@ require (
 
 replace github.com/jpincas/htmlfunc => ../htmlfunc // Move this line outside of the require block
 
-require gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
+require (
+	github.com/olahol/melody v1.2.1 // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
+)

@@ -61,17 +61,18 @@ func RespondWithDelayedNextMsg(msg string, args json.RawMessage, delay time.Dura
 
 // Broadcast re-renders every active session
 func (app *Application) Broadcast() {
-	for _, session := range app.Sessions {
-		if session.conn != nil {
-			session.render(nil)
-		}
+	sessions, _ := app.Melody.Sessions()
+	for _, s := range sessions {
+		// if session.conn != nil {
+		renderState(s)
+		// }
 	}
 }
 
-func (app *Application) BroadcastToSessions(sessionIDs []SessionID) {
-	for _, sid := range sessionIDs {
-		if session, ok := app.Sessions[sid]; ok {
-			go session.render(nil)
-		}
-	}
-}
+// func (app *Application) BroadcastToSessions(sessionIDs []SessionID) {
+// 	for _, sid := range sessionIDs {
+// 		if session, ok := app.Sessions[sid]; ok {
+// 			go session.render(nil)
+// 		}
+// 	}
+// }
