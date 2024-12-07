@@ -10,6 +10,4 @@ require (
 
 replace github.com/jpincas/htmlfunc => ../htmlfunc // Move this line outside of the require block
 
-require github.com/go-chi/chi/v5 v5.1.0
-
 require gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect

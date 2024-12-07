@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -220,10 +219,8 @@ func (m Model) renderRouting() h.Element {
 var app = gt.NewApp(
 	gt.DefaultAppConfig,
 	&Model{},
-	nil,
 )
 
 func main() {
-	log.Printf("Starting application server on %v\n", app.Config.Port)
-	http.ListenAndServe(fmt.Sprintf(":%v", app.Config.Port), app.Router)
+	app.Start()
 }

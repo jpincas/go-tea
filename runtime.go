@@ -12,8 +12,6 @@ import (
 
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gorilla/websocket"
 )
 
@@ -346,61 +344,19 @@ type Application struct {
 	// Sessions is a list of the current active sessions
 	Sessions sessionStore
 
-	// The server-side router used to serve the routes Gotea needs to function.
-	// Not to be confused with client-side (app) routing.
-	Router *chi.Mux
-
 	// The client provided state model
 	Model State
 }
 
 // NewApp is used by the calling application to set up a new gotea app
-func NewApp(config AppConfig, model State, router *chi.Mux) *Application {
+func NewApp(config AppConfig, model State) *Application {
 	app := Application{
 		Config:   config,
 		Model:    model,
 		Sessions: sessionStore{},
 	}
 
-	// If user has not passed in a preexisting router, use a new one
-	if router == nil {
-		router = chi.NewRouter()
-		router.Use(middleware.Logger)
-	}
-
-	app.initRouter(router)
 	return &app
-}
-
-// initRouter sets upf the server-side routing required by Gotea
-func (app *Application) initRouter(router *chi.Mux) {
-	router.Route("/", func(router chi.Router) {
-		// websocket handler
-		router.Get("/server", app.websocketHandler)
-
-		// static file server if required
-		if app.Config.StaticDirectory != "" {
-			fileServer(router, "/static", http.Dir(app.Config.StaticDirectory))
-		}
-
-		// for all other routes, respond with an html render of state
-		router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
-			state := app.newState(r)
-
-			// Protect against any errors in the inital route hook
-			defer func() {
-				if rec := recover(); rec != nil {
-					msg := fmt.Errorf("Gotea crashed while initialising state: %s", rec)
-					state.RenderError(w, msg)
-				}
-			}()
-
-			changeRoute(state, r.URL.Path)
-			state.Render(w)
-		})
-	})
-
-	app.Router = router
 }
 
 // newState bootstraps a new state model according to the init() provided by the calling app.
@@ -413,6 +369,27 @@ func (app Application) newState(r *http.Request) State {
 
 // Start creates the router, and serves it!
 func (app *Application) Start() {
+	http.HandleFunc("/server", app.websocketHandler)
+
+	if app.Config.StaticDirectory != "" {
+		fs := http.FileServer(http.Dir(app.Config.StaticDirectory))
+		http.Handle("/static/", http.StripPrefix("/static/", fs))
+	}
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		state := app.newState(r)
+
+		defer func() {
+			if rec := recover(); rec != nil {
+				msg := fmt.Errorf("Gotea crashed while initialising state: %s", rec)
+				state.RenderError(w, msg)
+			}
+		}()
+
+		changeRoute(state, r.URL.Path)
+		state.Render(w)
+	})
+
 	log.Printf("Starting application server on %v\n", app.Config.Port)
-	http.ListenAndServe(fmt.Sprintf(":%v", app.Config.Port), app.Router)
+	http.ListenAndServe(fmt.Sprintf(":%v", app.Config.Port), nil)
 }
