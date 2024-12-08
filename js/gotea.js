@@ -144,9 +144,13 @@ window.addEventListener('popstate', event => {
 document.addEventListener(
   "click",
   e => {
-    if (e.target.tagName === 'A' && !/external/.test(e.target.className)) {
+    let target = e.target;
+    while (target && target.tagName !== 'A') {
+      target = target.parentElement;
+    }
+    if (target && !/external/.test(target.className)) {
       e.preventDefault();
-      changeRoute(e.target.getAttribute("href"));
+      changeRoute(target.getAttribute("href"));
       return false;
     }
   },
