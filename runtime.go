@@ -129,7 +129,7 @@ type Message struct {
 	Message string `json:"message"`
 
 	Arguments     any    `json:"args"`
-	Idenifier     string `json:"identifier"`
+	Identifier    string `json:"identifier"`
 	BlockRerender bool   `json:"blockRerender"`
 }
 
