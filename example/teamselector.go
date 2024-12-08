@@ -1,11 +1,8 @@
 package main
 
 import (
-	"encoding/json"
-
 	gt "github.com/jpincas/go-tea"
 	"github.com/jpincas/go-tea/example/tagselector"
-	"github.com/jpincas/go-tea/msg"
 )
 
 var teamSelector = tagselector.Model{
@@ -20,38 +17,23 @@ var teamSelectorMessages = map[string]gt.MessageHandler{
 	tagselector.MsgRemoveTag:         teamSelectorRemoveTag,
 }
 
-func teamSelectorSelectTag(args json.RawMessage, s gt.State) gt.Response {
+func teamSelectorSelectTag(m gt.Message, s gt.State) gt.Response {
 	state := model(s)
-
-	tag, err := msg.DecodeString(args)
-	if err != nil {
-		return gt.RespondWithError(err)
-	}
-
+	tag := m.ArgsToString()
 	state.TeamSelector.SelectTag(tag)
 	return gt.Respond()
 }
 
-func teamSelectorSearchInputUpdate(args json.RawMessage, s gt.State) gt.Response {
+func teamSelectorSearchInputUpdate(m gt.Message, s gt.State) gt.Response {
 	state := model(s)
-
-	input, err := msg.DecodeString(args)
-	if err != nil {
-		return gt.RespondWithError(err)
-	}
-
+	input := m.ArgsToString()
 	state.TeamSelector.SuggestTags(input)
 	return gt.Respond()
 }
 
-func teamSelectorRemoveTag(args json.RawMessage, s gt.State) gt.Response {
+func teamSelectorRemoveTag(m gt.Message, s gt.State) gt.Response {
 	state := model(s)
-
-	tag, err := msg.DecodeString(args)
-	if err != nil {
-		return gt.RespondWithError(err)
-	}
-
+	tag := m.ArgsToString()
 	state.TeamSelector.RemoveTag(tag)
 	return gt.Respond()
 }

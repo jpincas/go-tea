@@ -1,10 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/rand"
 
+	gotea "github.com/jpincas/go-tea"
 	gt "github.com/jpincas/go-tea"
 	a "github.com/jpincas/htmlfunc/attributes"
 	"github.com/jpincas/htmlfunc/css"
@@ -33,13 +33,13 @@ var animationMessages gt.MessageMap = gt.MessageMap{
 	"RESET_ANIMATION":      ResetAnimation,
 }
 
-func StartAnimation(_ json.RawMessage, s gt.State) gt.Response {
+func StartAnimation(_ gotea.Message, s gt.State) gt.Response {
 	state := model(s)
 	state.Animation.Stop = false
-	return gt.RespondWithDelayedNextMsg("NEXT_ANIMATION_FRAME", nil, animationFrameDelay)
+	return gt.RespondWithDelayedNextMsg(gt.Message{Message: "NEXT_ANIMATION_FRAME"}, animationFrameDelay)
 }
 
-func NextAnimationFrame(_ json.RawMessage, s gt.State) gt.Response {
+func NextAnimationFrame(_ gotea.Message, s gt.State) gt.Response {
 	state := model(s)
 
 	if state.Animation.Stop {
@@ -77,17 +77,16 @@ func NextAnimationFrame(_ json.RawMessage, s gt.State) gt.Response {
 	state.Animation.TranslateX = translate(state.Animation.X, state.Animation.BackgroundSize, state.Animation.BallSize)
 	state.Animation.TranslateY = translate(state.Animation.Y, state.Animation.BackgroundSize, state.Animation.BallSize)
 
-	return gt.RespondWithDelayedNextMsg("NEXT_ANIMATION_FRAME", nil, animationFrameDelay)
+	return gt.RespondWithDelayedNextMsg(gt.Message{Message: "NEXT_ANIMATION_FRAME"}, animationFrameDelay)
 }
 
-func StopAnimation(_ json.RawMessage, s gt.State) gt.Response {
-	fmt.Println("stopping")
+func StopAnimation(_ gotea.Message, s gt.State) gt.Response {
 	state := model(s)
 	state.Animation.Stop = true
 	return gt.Respond()
 }
 
-func ResetAnimation(_ json.RawMessage, s gt.State) gt.Response {
+func ResetAnimation(_ gotea.Message, s gt.State) gt.Response {
 	state := model(s)
 	state.Animation.Stop = true
 	state.Animation.X = 50
@@ -109,15 +108,15 @@ func (animation Animation) render() h.Element {
 		h.H2(a.Attrs(), h.Text("A Server-Driven Animation")),
 		h.P(a.Attrs(), h.Text("A 30fps bouncing ball animation being driven entirely by the server. You'd probably never want to do this, but is fun to know that you can! Clicking 'start' fires off a never-ending sequence of messages with a 33ms delay between each. Each message sets the x and y coordinates of the ball and the scene is rerendered by the Gotea runtime.")),
 		h.Button(
-			a.Attrs(a.OnClick(gt.SendMessageNoArgs("START_ANIMATION"))),
+			a.Attrs(a.OnClick(gt.SendBasicMessageNoArgs("START_ANIMATION"))),
 			h.Text("Start Animation"),
 		),
 		h.Button(
-			a.Attrs(a.OnClick(gt.SendMessageNoArgs("STOP_ANIMATION"))),
+			a.Attrs(a.OnClick(gt.SendBasicMessageNoArgs("STOP_ANIMATION"))),
 			h.Text("Stop Animation"),
 		),
 		h.Button(
-			a.Attrs(a.OnClick(gt.SendMessageNoArgs("RESET_ANIMATION"))),
+			a.Attrs(a.OnClick(gt.SendBasicMessageNoArgs("RESET_ANIMATION"))),
 			h.Text("Reset Animation"),
 		),
 		h.P(a.Attrs(), h.Text(fmt.Sprintf("Coordinates: (%d, %d)", animation.X, animation.Y))),

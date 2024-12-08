@@ -1,13 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	gt "github.com/jpincas/go-tea"
-	"github.com/jpincas/go-tea/msg"
 	a "github.com/jpincas/htmlfunc/attributes"
 	h "github.com/jpincas/htmlfunc/html"
 )
@@ -35,13 +33,9 @@ func (chat *Chat) AddMessage(message Message) {
 	messages = append(messages, message)
 }
 
-func SetUsername(args json.RawMessage, s gt.State) gt.Response {
+func SetUsername(m gt.Message, s gt.State) gt.Response {
 	state := model(s)
-
-	input, err := msg.DecodeString(args)
-	if err != nil {
-		return gt.RespondWithError(err)
-	}
+	input := m.ArgsToString()
 
 	// Cache the username against the sid so we can use it in init
 	usernames[state.sessionID] = input
@@ -50,13 +44,9 @@ func SetUsername(args json.RawMessage, s gt.State) gt.Response {
 	return gt.Respond()
 }
 
-func SendMessage(args json.RawMessage, s gt.State) gt.Response {
+func SendMessage(m gt.Message, s gt.State) gt.Response {
 	state := model(s)
-
-	input, err := msg.DecodeString(args)
-	if err != nil {
-		return gt.RespondWithError(err)
-	}
+	input := m.ArgsToString()
 
 	messages = append(messages, Message{
 		TimeStamp: time.Now(),
@@ -78,7 +68,7 @@ func (chat Chat) render() h.Element {
 			h.Label(a.Attrs(a.For("usernameInput")), h.Text("Enter your username:")),
 			h.Input(a.Attrs(a.Type("text"), a.Id("usernameInput"), a.Value(chat.Username), a.Class("username-input"))),
 			h.Button(
-				a.Attrs(a.OnClick(gt.SendMessageWithInputValue("SET_USERNAME", "usernameInput")), a.Class("set-username-button")),
+				a.Attrs(a.OnClick(gt.SendBasicMessageWithValueFromInput("SET_USERNAME", "usernameInput")), a.Class("set-username-button")),
 				h.Text("Set Username"),
 			),
 		),
@@ -104,7 +94,7 @@ func (chat Chat) render() h.Element {
 		h.P(a.Attrs(a.Class("username-display")), h.Text(fmt.Sprintf("Posting as %s", chat.Username))),
 		h.Input(a.Attrs(a.Type("text"), a.Id("messageInput"), a.Placeholder("Your message"), a.Class("message-input"))),
 		h.Button(
-			a.Attrs(a.OnClick(gt.SendMessageWithInputValue("SEND_MESSAGE", "messageInput")), a.Class("send-button")),
+			a.Attrs(a.OnClick(gt.SendBasicMessageWithValueFromInput("SEND_MESSAGE", "messageInput")), a.Class("send-button")),
 			h.Text("Send"),
 		),
 	)

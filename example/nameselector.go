@@ -1,11 +1,8 @@
 package main
 
 import (
-	"encoding/json"
-
 	gt "github.com/jpincas/go-tea"
 	"github.com/jpincas/go-tea/example/tagselector"
-	"github.com/jpincas/go-tea/msg"
 	a "github.com/jpincas/htmlfunc/attributes"
 	h "github.com/jpincas/htmlfunc/html"
 )
@@ -24,38 +21,23 @@ var nameSelectorMessages = map[string]gt.MessageHandler{
 	tagselector.MsgRemoveTag:         nameSelectorRemoveTag,
 }
 
-func nameSelectorSelectTag(args json.RawMessage, s gt.State) gt.Response {
+func nameSelectorSelectTag(m gt.Message, s gt.State) gt.Response {
 	state := model(s)
-
-	tag, err := msg.DecodeString(args)
-	if err != nil {
-		return gt.RespondWithError(err)
-	}
-
+	tag := m.ArgsToString()
 	state.NameSelector.SelectTag(tag)
 	return gt.Respond()
 }
 
-func nameSelectorRemoveTag(args json.RawMessage, s gt.State) gt.Response {
+func nameSelectorRemoveTag(m gt.Message, s gt.State) gt.Response {
 	state := model(s)
-
-	tag, err := msg.DecodeString(args)
-	if err != nil {
-		return gt.RespondWithError(err)
-	}
-
+	tag := m.ArgsToString()
 	state.NameSelector.RemoveTag(tag)
 	return gt.Respond()
 }
 
-func nameSelectorSearchInputUpdate(args json.RawMessage, s gt.State) gt.Response {
+func nameSelectorSearchInputUpdate(m gt.Message, s gt.State) gt.Response {
 	state := model(s)
-
-	input, err := msg.DecodeString(args)
-	if err != nil {
-		return gt.RespondWithError(err)
-	}
-
+	input := m.ArgsToString()
 	state.NameSelector.SuggestTags(input)
 	return gt.Respond()
 }

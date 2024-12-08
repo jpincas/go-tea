@@ -81,7 +81,7 @@ func (selector Model) Render() h.Element {
 					a.Type("text"),
 					a.Placeholder("Start typing to see tags"),
 					a.Value(selector.SearchInput),
-					a.OnKeyUp(gt.SendMessageWithInputValue(msgUpdateSearchInput, searchInputID)),
+					a.OnKeyUp(gt.SendBasicMessageWithValueFromInput(msgUpdateSearchInput, searchInputID)),
 				),
 			),
 			h.Ul(
@@ -90,7 +90,7 @@ func (selector Model) Render() h.Element {
 					var elements []h.Element
 					for _, tag := range selector.SuggestedTags {
 						elements = append(elements, h.Li(
-							a.Attrs(a.Class("tagselector-tag tagselector-suggestedtag"), a.OnClick(gt.SendMessage(msgSelectTag, tag))),
+							a.Attrs(a.Class("tagselector-tag tagselector-suggestedtag"), a.OnClick(gt.SendBasicMessage(msgSelectTag, tag))),
 							h.Text(tag),
 						))
 					}
@@ -113,7 +113,7 @@ func (selector Model) Render() h.Element {
 					var elements []h.Element
 					for _, tag := range selector.SelectedTags {
 						elements = append(elements, h.Li(
-							a.Attrs(a.Class("tagselector-tag tagselector-selectedtag"), a.OnClick(gt.SendMessage(msgRemoveTag, tag))),
+							a.Attrs(a.Class("tagselector-tag tagselector-selectedtag"), a.OnClick(gt.SendBasicMessage(msgRemoveTag, tag))),
 							h.Text(tag),
 						))
 					}

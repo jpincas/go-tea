@@ -1,13 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strings"
 
 	gt "github.com/jpincas/go-tea"
-	"github.com/jpincas/go-tea/msg"
 	a "github.com/jpincas/htmlfunc/attributes"
 	h "github.com/jpincas/htmlfunc/html"
 )
@@ -57,13 +55,9 @@ type Card struct {
 	Matched bool
 }
 
-func FlipCard(args json.RawMessage, s gt.State) gt.Response {
+func FlipCard(m gt.Message, s gt.State) gt.Response {
 	state := model(s)
-
-	cardToFlip, err := msg.DecodeInt(args)
-	if err != nil {
-		return gt.RespondWithError(err)
-	}
+	cardToFlip := m.ArgsToInt()
 
 	state.MemoryGame.Deck.flipCard(cardToFlip)
 
@@ -72,29 +66,29 @@ func FlipCard(args json.RawMessage, s gt.State) gt.Response {
 
 		if state.MemoryGame.Deck.hasFoundMatch() {
 			state.MemoryGame.incrementScore()
-			return gt.RespondWithDelayedNextMsg("REMOVE_MATCHES", nil, 1000)
+			return gt.RespondWithDelayedNextMsg(gt.Message{Message: "REMOVE_MATCHES"}, 1000)
 		}
 
-		return gt.RespondWithDelayedNextMsg("FLIP_ALL_BACK", nil, 1000)
+		return gt.RespondWithDelayedNextMsg(gt.Message{Message: "FLIP_ALL_BACK"}, 1000)
 	}
 
 	return gt.Respond()
 }
 
-func RestartGame(_ json.RawMessage, s gt.State) gt.Response {
+func RestartGame(_ gt.Message, s gt.State) gt.Response {
 	state := model(s)
 	state.MemoryGame.Deck.reset()
 	state.MemoryGame.resetScores()
 	return gt.Respond()
 }
 
-func FlipAllBack(_ json.RawMessage, s gt.State) gt.Response {
+func FlipAllBack(_ gt.Message, s gt.State) gt.Response {
 	state := model(s)
 	state.MemoryGame.Deck.flipAllBack()
 	return gt.Respond()
 }
 
-func RemoveMatches(_ json.RawMessage, s gt.State) gt.Response {
+func RemoveMatches(_ gt.Message, s gt.State) gt.Response {
 	state := model(s)
 	state.MemoryGame.Deck.removeMatches()
 
@@ -191,7 +185,7 @@ func renderGameWon() h.Element {
 		a.Attrs(),
 		h.H2(a.Attrs(), h.Text("Well Done! You Won!")),
 		h.Button(
-			a.Attrs(a.OnClick(gt.SendMessageNoArgs("RESTART_GAME"))),
+			a.Attrs(a.OnClick(gt.SendBasicMessageNoArgs("RESTART_GAME"))),
 			h.Text("New Game"),
 		),
 	)
@@ -225,7 +219,7 @@ func (card Card) renderContainer(index int) h.Element {
 func (card Card) renderFlipButton(index int) h.Element {
 	if !card.Matched {
 		return h.Button(
-			a.Attrs(a.Class("flipcard"), a.OnClick(gt.SendMessage("FLIP_CARD", index))),
+			a.Attrs(a.Class("flipcard"), a.OnClick(gt.SendBasicMessage("FLIP_CARD", index))),
 			h.Text("Flip"),
 		)
 	}

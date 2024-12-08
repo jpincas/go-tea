@@ -37,35 +37,37 @@ socket.onclose = event => {
 };
 
 // Send a message through the websocket
-const sendMessage = (message, args) => {
-  const msg = {
-    message,
-    args: JSON.parse(args)
-  };
-  console.log(`${SOCKET_MESSAGE}`, msg);
-  socket.send(JSON.stringify(msg));
-};
-
-// Submit a form through the websocket
-const submitForm = (message, formID) => {
-  const msg = {
-    message,
-    args: serializeForm(formID)
-  };
-  console.log(`${SOCKET_MESSAGE}`, msg);
-  socket.send(JSON.stringify(msg));
+const sendMessage = (msg) => {
+  const msgJsonString = JSON.stringify(msg);
+  console.log(`${SOCKET_MESSAGE}`, msgJsonString);
+  socket.send(msgJsonString);
 };
 
 // Send a message with a value from an input field
-const sendMessageWithValue = (message, inputID) => {
-  const value = document.getElementById(inputID).value;
-  const msg = {
-    message,
-    args: value
-  };
+const sendMessageWithValueFromInput = (msg, inputID) => {
+  msg.args = document.getElementById(inputID).value;
+
+  const msgJsonString = JSON.stringify(msg);
+  console.log(`${SOCKET_MESSAGE}`, msgJsonString);
+  socket.send(msgJsonString);
+};
+
+const sendMessageWithValueFromThisInput = (msg) => {
+  msg.args = document.activeElement.value;
+
+  const msgJsonString = JSON.stringify(msg);
+  console.log(`${SOCKET_MESSAGE}`, msgJsonString);
+  socket.send(msgJsonString);
+};
+
+// Submit a form through the websocket
+const updateFormState = (msg, formID) => {
+  msg.args = serializeForm(formID);
+
   console.log(`${SOCKET_MESSAGE}`, msg);
   socket.send(JSON.stringify(msg));
 };
+
 
 // Serialize form data into an object
 const serializeForm = formID => {
@@ -123,8 +125,9 @@ const changeRoute = route => {
 // Expose functions to the global window object
 window.gotea = {
   sendMessage,
-  submitForm,
-  sendMessageWithValue
+  updateFormState,
+  sendMessageWithValueFromInput,
+  sendMessageWithValueFromThisInput
 };
 
 // Handle browser back/forward navigation

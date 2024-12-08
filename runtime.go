@@ -59,13 +59,8 @@ var routingMessages = MessageMap{
 
 // changeRouteMsgHandler is the built in message handler which is fired when a
 // navigation event is detected
-func changeRouteMsgHandler(args json.RawMessage, state State) Response {
-	var newRoute string
-	if err := json.Unmarshal(args, &newRoute); err != nil {
-		return RespondWithError(err)
-	}
-
-	changeRoute(state, newRoute)
+func changeRouteMsgHandler(message Message, state State) Response {
+	changeRoute(state, message.Arguments.(string))
 	return Respond()
 }
 
@@ -128,9 +123,44 @@ func onConnect(model State) func(s *melody.Session) {
 // It's quite simple and consists of just two pieces of information:
 // 1 - the name of the message (a string)
 // 2 - some optional accompanying data (JSON) (can be nil)
+// 3 - an optional identifier (a string) - useful for reusing the same message handler for multiple messages
+// 4 - an optional blockRerender flag (bool) - useful for messages that don't require a rerender
 type Message struct {
-	Message   string          `json:"message"`
-	Arguments json.RawMessage `json:"args"`
+	Message string `json:"message"`
+
+	Arguments     any    `json:"args"`
+	Idenifier     string `json:"identifier"`
+	BlockRerender bool   `json:"blockRerender"`
+}
+
+// Some helpers for decoding messages
+
+func (m Message) toJson() string {
+	jsonData, _ := json.Marshal(m)
+	return string(jsonData)
+}
+
+func (m Message) MustDecodeArgs(target any) {
+	// First marshall the arguments to JSON
+	jsonData, _ := json.Marshal(m.Arguments)
+	// Then unmarshall to the target
+	json.Unmarshal(jsonData, target)
+}
+
+func (m Message) ArgsToString() string {
+	s, _ := m.Arguments.(string)
+	return s
+}
+
+func (m Message) ArgsToFloat() float64 {
+	f, _ := m.Arguments.(float64)
+	return f
+}
+
+func (m Message) ArgsToInt() int {
+	// JSON alwayss marshalls numbers to float64
+	f, _ := m.Arguments.(float64)
+	return int(f)
 }
 
 // Response is returned by MessageHandler functions.  The most important part of the
@@ -163,26 +193,23 @@ func RespondWithError(err error) Response {
 }
 
 // RespondWithNextMessage responds and queues up another message with 0 delay
-func RespondWithNextMsg(msg string, args json.RawMessage) Response {
-	return RespondWithDelayedNextMsg(msg, args, 0)
+func RespondWithNextMsg(message Message) Response {
+	return RespondWithDelayedNextMsg(message, 0)
 }
 
 // RespondWithNextMessage responds and queues up another message with a delay of N milliseconds
-func RespondWithDelayedNextMsg(msg string, args json.RawMessage, delay time.Duration) Response {
+func RespondWithDelayedNextMsg(message Message, delay time.Duration) Response {
 	return Response{
-		NextMsg: &Message{
-			Message:   msg,
-			Arguments: args,
-		},
-		Delay: delay,
-		Error: nil,
+		NextMsg: &message,
+		Delay:   delay,
+		Error:   nil,
 	}
 }
 
 // MessageHandler functions are the functions that are called when a message is received.
 // Typically they would be used to make some sort of mutation to the state.
 // They can also return a new message to be processed, and optionally a delay.
-type MessageHandler func(json.RawMessage, State) Response
+type MessageHandler func(Message, State) Response
 
 // MessageMap holds a record of MessageHandler functions keyed against message.
 // This enables the runtime to look up the correct function to execute for each message received.
@@ -249,13 +276,15 @@ func (message Message) process(s *melody.Session, state State) error {
 	}
 
 	// Execute the message handler function and get the response
-	response := funcToExecute(message.Arguments, state)
+	response := funcToExecute(message, state)
 	if response.Error != nil {
 		return response.Error
 	}
 
 	// Now we can render the new state
-	s.Write(state.Render())
+	if !message.BlockRerender {
+		s.Write(state.Render())
+	}
 
 	// If there is a next message, we process it
 	// Note: this must happen in a go routine to unblock this session from receiving further messages
