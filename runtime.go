@@ -163,6 +163,12 @@ func (m Message) ArgsToInt() int {
 	return int(f)
 }
 
+func (m Message) ArgsToUint() uint {
+	// JSON alwayss marshalls numbers to float64
+	f, _ := m.Arguments.(float64)
+	return uint(f)
+}
+
 // Response is returned by MessageHandler functions.  The most important part of the
 // response is the new state, but they can optionally return another message to be
 // processed after an optional delay.
