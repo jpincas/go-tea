@@ -62,6 +62,10 @@ func SendMessage(m Message) string {
 	return fmt.Sprintf(`%s(%s)`, constructFuncName(sendMessageFuncName), m.toJson())
 }
 
+func IfElse(condition string, m1, m2 string) string {
+	return fmt.Sprintf(`%s ? %s : %s`, condition, m1, m2)
+}
+
 func SendMessageWithValueFromInput(m Message, inputID string) string {
 	return fmt.Sprintf(`%s(%s, "%s")`, constructFuncName(sendMessageWithValueFuncName), m.toJson(), inputID)
 }
