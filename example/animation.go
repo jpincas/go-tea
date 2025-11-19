@@ -105,6 +105,17 @@ func translate(co, backgroundSize, ballSize int) int {
 func (animation Animation) render() h.Element {
 	return h.Div(
 		a.Attrs(a.Class("space-y-6")),
+		renderExplanatoryNote(
+			"Server-Side Animation",
+			`
+			<p class="mb-2">This demonstrates a continuous animation loop driven by the server.</p>
+			<ul class="list-disc pl-5 space-y-1">
+				<li><strong>Game Loop:</strong> The server sends a <code>TICK</code> message to itself repeatedly using <code>RespondWithDelayedNextMsg</code>.</li>
+				<li><strong>State Update:</strong> On each tick, the ball's position is updated in the state.</li>
+				<li><strong>Rendering:</strong> The new state is rendered and sent to the client. GoTea's virtual DOM diffing ensures only the changed attributes (style) are updated in the DOM, resulting in smooth animation.</li>
+			</ul>
+			`,
+		),
 		h.H2(a.Attrs(a.Class("text-2xl font-bold text-gray-900")), h.Text("A Server-Driven Animation")),
 		h.P(a.Attrs(a.Class("text-gray-600")), h.Text("A 30fps bouncing ball animation being driven entirely by the server. You'd probably never want to do this, but is fun to know that you can! Clicking 'start' fires off a never-ending sequence of messages with a 33ms delay between each. Each message sets the x and y coordinates of the ball and the scene is rerendered by the Gotea runtime.")),
 		

@@ -56,10 +56,21 @@ func formUpdate(m gt.Message, s gt.State) gt.Response {
 }
 
 // Render
-func (form Form) render() h.Element {
+func (f Form) render() h.Element {
 	return h.Div(
 		a.Attrs(a.Class("space-y-6")),
-		h.H1(a.Attrs(a.Class("text-2xl font-bold text-gray-900")), h.Text("Form Example")),
+		renderExplanatoryNote(
+			"Forms and Input Handling",
+			`
+			<p class="mb-2">This example shows how to handle form inputs and state.</p>
+			<ul class="list-disc pl-5 space-y-1">
+				<li><strong>Two-Way Binding:</strong> Input values are bound to the state. <code>INPUT</code> events trigger messages that update the state.</li>
+				<li><strong>Form Submission:</strong> The <code>SUBMIT</code> event is captured to process the form data.</li>
+				<li><strong>Validation:</strong> Input validation logic can be implemented in the update function before updating the state.</li>
+			</ul>
+			`,
+		),
+		h.H2(a.Attrs(a.Class("text-2xl font-bold text-gray-900")), h.Text("Form Example")),
 		h.Div(
 			a.Attrs(a.Class("grid grid-cols-1 md:grid-cols-2 gap-8")),
 			h.Form(
@@ -73,7 +84,7 @@ func (form Form) render() h.Element {
 							a.Class("mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"),
 							a.Type("text"),
 							a.Placeholder("Some simple text input"),
-							a.Value(form.TextInput),
+							a.Value(f.TextInput),
 							a.Name("textInput"),
 							a.OnKeyUp(gt.BasicUpdateForm("FORM_UPDATE", "my-form")),
 						),
@@ -91,12 +102,12 @@ func (form Form) render() h.Element {
 						),
 						func() []h.Element {
 							var options []h.Element
-							for _, option := range form.Options {
+							for _, option := range f.Options {
 								options = append(options, h.Option(
 									a.Attrs(
 										a.Value(option),
 										func() a.Attribute {
-											if form.SelectInput == option {
+											if f.SelectInput == option {
 												return a.Selected(true)
 											}
 											return a.Selected(false)
@@ -121,10 +132,10 @@ func (form Form) render() h.Element {
 							a.Size(4), 
 							a.Multiple(true),
 						),
-						h.Option(a.Attrs(a.Value("first"), form.isSelected("first", form.MultipleTextInput)), h.Text("first")),
-						h.Option(a.Attrs(a.Value("second"), form.isSelected("second", form.MultipleTextInput)), h.Text("second")),
-						h.Option(a.Attrs(a.Value("third"), form.isSelected("third", form.MultipleTextInput)), h.Text("third")),
-						h.Option(a.Attrs(a.Value("fourth"), form.isSelected("fourth", form.MultipleTextInput)), h.Text("fourth")),
+						h.Option(a.Attrs(a.Value("first"), f.isSelected("first", f.MultipleTextInput)), h.Text("first")),
+						h.Option(a.Attrs(a.Value("second"), f.isSelected("second", f.MultipleTextInput)), h.Text("second")),
+						h.Option(a.Attrs(a.Value("third"), f.isSelected("third", f.MultipleTextInput)), h.Text("third")),
+						h.Option(a.Attrs(a.Value("fourth"), f.isSelected("fourth", f.MultipleTextInput)), h.Text("fourth")),
 					),
 				),
 
@@ -138,7 +149,7 @@ func (form Form) render() h.Element {
 							a.Name("TextboxInput"), 
 							a.Rows(5),
 						),
-						h.Text(form.TextboxInput),
+						h.Text(f.TextboxInput),
 					),
 				),
 
@@ -156,7 +167,7 @@ func (form Form) render() h.Element {
 									a.Name("RadioTextInput"), 
 									a.Value("male"), 
 									a.OnChange(gt.BasicUpdateForm("FORM_UPDATE", "my-form")), 
-									form.isChecked("male", form.RadioTextInput),
+									f.isChecked("male", f.RadioTextInput),
 								),
 							),
 							h.Label(a.Attrs(a.Class("ml-3 block text-sm font-medium text-gray-700")), h.Text("Male")),
@@ -170,7 +181,7 @@ func (form Form) render() h.Element {
 									a.Name("RadioTextInput"), 
 									a.Value("female"), 
 									a.OnChange(gt.BasicUpdateForm("FORM_UPDATE", "my-form")), 
-									form.isChecked("female", form.RadioTextInput),
+									f.isChecked("female", f.RadioTextInput),
 								),
 							),
 							h.Label(a.Attrs(a.Class("ml-3 block text-sm font-medium text-gray-700")), h.Text("Female")),
@@ -188,7 +199,7 @@ func (form Form) render() h.Element {
 								a.Type("checkbox"), 
 								a.Name("CheckboxInput"), 
 								a.OnChange(gt.BasicUpdateForm("FORM_UPDATE", "my-form")), 
-								form.isCheckedBool(form.CheckboxInput),
+								f.isCheckedBool(f.CheckboxInput),
 							),
 						),
 					),
@@ -199,12 +210,12 @@ func (form Form) render() h.Element {
 				),
 			),
 			
-			form.renderValues(),
+			f.renderValues(),
 		),
 	)
 }
 
-func (form Form) isSelected(value string, selectedValues []string) a.Attribute {
+func (f Form) isSelected(value string, selectedValues []string) a.Attribute {
 	for _, v := range selectedValues {
 		if v == value {
 			return a.Selected(true)
@@ -213,14 +224,14 @@ func (form Form) isSelected(value string, selectedValues []string) a.Attribute {
 	return a.Selected(false)
 }
 
-func (form Form) isChecked(value string, selectedValue string) a.Attribute {
+func (f Form) isChecked(value string, selectedValue string) a.Attribute {
 	if value == selectedValue {
 		return a.Checked(true)
 	}
 	return a.Checked(false)
 }
 
-func (form Form) isCheckedBool(checked bool) a.Attribute {
+func (f Form) isCheckedBool(checked bool) a.Attribute {
 	if checked {
 		return a.Checked(true)
 	}

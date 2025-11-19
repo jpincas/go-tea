@@ -62,6 +62,17 @@ func SendMessage(m gt.Message, s gt.State) gt.Response {
 func (chat Chat) render() h.Element {
 	return h.Div(
 		a.Attrs(a.Class("space-y-6")),
+		renderExplanatoryNote(
+			"Real-time Chat",
+			`
+			<p class="mb-2">A simple chat application demonstrating shared state and broadcasting.</p>
+			<ul class="list-disc pl-5 space-y-1">
+				<li><strong>Shared State:</strong> The list of messages is a global variable shared across all sessions.</li>
+				<li><strong>Broadcasting:</strong> When a new message is received, the server updates the shared state and calls <code>app.Broadcast()</code> to re-render all connected clients.</li>
+				<li><strong>Session State:</strong> The username is stored in the session-specific state.</li>
+			</ul>
+			`,
+		),
 		h.H2(a.Attrs(a.Class("text-2xl font-bold text-gray-900")), h.Text("Chat Room")),
 		
 		h.Div(

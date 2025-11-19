@@ -45,6 +45,17 @@ func nameSelectorSearchInputUpdate(m gt.Message, s gt.State) gt.Response {
 func renderComponents(nameSelector, tagSelector tagselector.Model) h.Element {
 	return h.Div(
 		a.Attrs(a.Class("space-y-8")),
+		renderExplanatoryNote(
+			"Reusable Components",
+			`
+			<p class="mb-2">This example demonstrates how to create reusable components in GoTea.</p>
+			<ul class="list-disc pl-5 space-y-1">
+				<li><strong>Component Model:</strong> The <code>TagSelector</code> is a struct that holds its own state.</li>
+				<li><strong>Instantiation:</strong> We create two instances of the <code>TagSelector</code> in the main <code>Model</code>, each with different configuration.</li>
+				<li><strong>Message Routing:</strong> Messages are routed to the correct component instance (though in this simple example, we just have separate message handlers).</li>
+			</ul>
+			`,
+		),
 		h.Div(
 			a.Attrs(a.Class("text-center")),
 			h.H2(a.Attrs(a.Class("text-2xl font-bold text-gray-900")), h.Text("Components Demo")),

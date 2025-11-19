@@ -224,6 +224,17 @@ func (deck Deck) reset() {
 func (game MemoryGame) render() h.Element {
 	return h.Div(
 		a.Attrs(a.Class("space-y-6")),
+		renderExplanatoryNote(
+			"Memory Game Architecture",
+			`
+			<p class="mb-2">The Memory Game demonstrates a more complex component with its own state and logic.</p>
+			<ul class="list-disc pl-5 space-y-1">
+				<li><strong>Component Structure:</strong> The <code>MemoryGame</code> struct encapsulates the game state (Deck, Score, Turns).</li>
+				<li><strong>Message Handling:</strong> Game-specific messages (like <code>FLIP_CARD</code>) are handled by the main update function, which delegates to game logic.</li>
+				<li><strong>Delayed Messages:</strong> When two cards don't match, a delayed message is used to flip them back after a short pause, demonstrating <code>RespondWithDelayedNextMsg</code>.</li>
+			</ul>
+			`,
+		),
 		h.Div(
 			a.Attrs(a.Class("flex justify-center space-x-4")),
 			renderDifficultyButton(Easy, game.Difficulty),

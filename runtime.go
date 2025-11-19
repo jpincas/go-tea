@@ -360,7 +360,7 @@ func (message Message) process(s *melody.Session, state State) error {
 	if response.NextMsg != nil {
 		go func() {
 			if response.Delay > 0 {
-				time.Sleep(response.Delay * time.Millisecond)
+				time.Sleep(response.Delay)
 			}
 
 			response.NextMsg.process(s, state)

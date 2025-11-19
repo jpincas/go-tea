@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	gt "github.com/jpincas/go-tea"
+	"github.com/jpincas/go-tea/example/blocktrader"
 	"github.com/jpincas/go-tea/example/tagselector"
 	a "github.com/jpincas/htmlfunc/attributes"
 	h "github.com/jpincas/htmlfunc/html"
@@ -27,6 +28,11 @@ type Model struct {
 	Animation    Animation
 	Counter      int
 	Chat         Chat
+	Blocktrader  blocktrader.Model
+}
+
+func (m *Model) GetBlocktrader() *blocktrader.Model {
+	return &m.Blocktrader
 }
 
 func (m *Model) Serialize() ([]byte, error) {
@@ -39,9 +45,11 @@ func (m *Model) Serialize() ([]byte, error) {
 			TurnsTaken int        `json:"turns_taken"`
 			Difficulty Difficulty `json:"difficulty"`
 		} `json:"memory_game"`
+		Blocktrader blocktrader.Model `json:"blocktrader"`
 	}{
 		Counter:   m.Counter,
 		RouteData: m.RouteData,
+		Blocktrader: m.Blocktrader,
 	}
 
 	snapshot.MemoryGame.Score = m.MemoryGame.Score
@@ -60,6 +68,7 @@ func (m *Model) Deserialize(data []byte) error {
 			TurnsTaken int        `json:"turns_taken"`
 			Difficulty Difficulty `json:"difficulty"`
 		} `json:"memory_game"`
+		Blocktrader blocktrader.Model `json:"blocktrader"`
 	}
 
 	if err := json.Unmarshal(data, &snapshot); err != nil {
@@ -72,6 +81,17 @@ func (m *Model) Deserialize(data []byte) error {
 	m.MemoryGame.Score = snapshot.MemoryGame.Score
 	m.MemoryGame.TurnsTaken = snapshot.MemoryGame.TurnsTaken
 	m.MemoryGame.Difficulty = snapshot.MemoryGame.Difficulty
+	m.Blocktrader = snapshot.Blocktrader
+
+	// Ensure Blocktrader config is valid (handle case where state was saved before Blocktrader was added)
+	if m.Blocktrader.Config.BoardSize == 0 {
+		m.Blocktrader.Config = blocktrader.DefaultConfig
+	}
+
+	// Ensure Blocktrader state is valid
+	if len(m.Blocktrader.State.Rows) == 0 || len(m.Blocktrader.State.Cols) == 0 {
+		m.Blocktrader.State = blocktrader.NewState(m.Blocktrader.Config)
+	}
 
 	return nil
 }
@@ -120,6 +140,7 @@ func (m *Model) Init(sid uuid.UUID) gt.State {
 			Username: usernames[sid],
 			Messages: &messages,
 		},
+		Blocktrader: blocktrader.NewModel(),
 	}
 
 	// Register Routes
@@ -144,6 +165,9 @@ func (m *Model) Init(sid uuid.UUID) gt.State {
 	model.Register("/chat", func(s gt.State) []byte {
 		return model.Chat.render().Bytes()
 	})
+	model.Register("/blocktrader", func(s gt.State) []byte {
+		return model.Blocktrader.Render().Bytes()
+	})
 
 	return model
 }
@@ -158,6 +182,7 @@ func (m *Model) Update() gt.MessageMap {
 		counterMessages,
 		crashMessages,
 		chatMessages,
+		blocktrader.Messages,
 	)
 }
 
@@ -217,6 +242,7 @@ func (m *Model) Render() []byte {
 								navLink("/routing", "Routing", m.Router.Route == "/routing"),
 								navLink("/animation", "Animation", m.Router.Route == "/animation"),
 								navLink("/chat", "Chat", m.Router.Route == "/chat"),
+								navLink("/blocktrader", "Blocktrader", m.Router.Route == "/blocktrader"),
 							),
 						),
 					),
@@ -278,6 +304,8 @@ func (m *Model) RenderView() h.Element {
 		return m.Animation.render()
 	case "/chat":
 		return m.Chat.render()
+	case "/blocktrader":
+		return m.Blocktrader.Render()
 	default:
 		return renderHome(m.Counter)
 	}
@@ -287,6 +315,18 @@ func (m *Model) RenderView() h.Element {
 func renderHome(counter int) h.Element {
 	return h.Div(
 		a.Attrs(a.Class("space-y-6")),
+		renderExplanatoryNote(
+			"How this works",
+			`
+			<p class="mb-2">This is the classic "Counter" example, the "Hello World" of the Elm Architecture.</p>
+			<ul class="list-disc pl-5 space-y-1">
+				<li><strong>State:</strong> A simple integer <code>Counter</code> in the <code>Model</code>.</li>
+				<li><strong>Messages:</strong> <code>INCREMENT</code> and <code>DECREMENT</code> messages are sent when buttons are clicked.</li>
+				<li><strong>Update:</strong> The update function modifies the <code>Counter</code> based on the message.</li>
+				<li><strong>Render:</strong> The view function renders the current count and buttons.</li>
+			</ul>
+			`,
+		),
 		h.H2(a.Attrs(a.Class("text-2xl font-bold text-gray-900")), h.Text("Gotea Demo Site")),
 		h.P(a.Attrs(a.Class("text-gray-600")), h.Text("Choose an example from the menu to get started, or have a play with the classic 'counter' example below:")),
 		renderCounter(counter),
@@ -298,6 +338,18 @@ func renderHome(counter int) h.Element {
 func (m *Model) renderRouting() h.Element {
 	return h.Div(
 		a.Attrs(a.Class("space-y-6")),
+		renderExplanatoryNote(
+			"Routing in GoTea",
+			`
+			<p class="mb-2">GoTea provides a simple but flexible routing system.</p>
+			<ul class="list-disc pl-5 space-y-1">
+				<li><strong>Navigation:</strong> Links trigger a <code>CHANGE_ROUTE</code> message.</li>
+				<li><strong>Router:</strong> The <code>Router</code> struct (embedded in <code>Model</code>) handles the current route state.</li>
+				<li><strong>Hooks:</strong> The <code>OnRouteChange</code> hook allows you to execute logic (like data fetching) when the route changes.</li>
+				<li><strong>Rendering:</strong> The main <code>Render</code> function switches on <code>m.Router.Route</code> (or a derived template name) to decide what to render.</li>
+			</ul>
+			`,
+		),
 		h.H2(a.Attrs(a.Class("text-2xl font-bold text-gray-900")), h.Text("Routing")),
 		h.Div(
 			a.Attrs(a.Class("bg-blue-50 p-4 rounded-md border border-blue-200")),
@@ -341,6 +393,20 @@ func (m *Model) renderRouting() h.Element {
 		h.Div(
 			a.Attrs(a.Class("bg-yellow-50 p-4 rounded-md border border-yellow-200")),
 			h.H3(a.Attrs(a.Class("text-sm text-yellow-800")), h.Text(fmt.Sprintf("A random number generated before rendering by the routing hook (a simple representation of route-specific data loading): %d", m.RouteData))),
+		),
+	)
+}
+
+func renderExplanatoryNote(title, content string) h.Element {
+	return h.Details(
+		a.Attrs(a.Class("bg-blue-50 border border-blue-200 rounded-md mb-6")),
+		h.Summary(
+			a.Attrs(a.Class("cursor-pointer p-4 font-bold text-blue-900 hover:bg-blue-100 rounded-t-md outline-none")),
+			h.Text(fmt.Sprintf("ℹ️ %s", title)),
+		),
+		h.Div(
+			a.Attrs(a.Class("p-4 pt-0 text-blue-800 text-sm leading-relaxed")),
+			h.UnsafeRaw(content),
 		),
 	)
 }
