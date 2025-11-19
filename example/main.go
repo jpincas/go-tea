@@ -33,13 +33,21 @@ func model(s gt.State) *Model {
 }
 
 func (m Model) Init(sid uuid.UUID) gt.State {
+	l, err := LoadLeaderboard()
+	if err != nil {
+		fmt.Printf("Error loading leaderboard: %v\n", err)
+		l = NewLeaderboard()
+	}
+
 	return &Model{
 		sessionID: sid,
 		MemoryGame: MemoryGame{
-			Deck:              NewDeck(4),
+			Deck:              NewDeck(Medium.Pairs()),
 			TurnsTaken:        0,
 			LastAttemptedCard: 5, //hack
 			Score:             0,
+			Difficulty:        Medium,
+			Leaderboard:       l,
 		},
 		NameSelector: nameSelector,
 		TeamSelector: teamSelector,

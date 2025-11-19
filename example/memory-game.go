@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"time"
 
 	gt "github.com/jpincas/go-tea"
 	a "github.com/jpincas/htmlfunc/attributes"
@@ -11,10 +12,28 @@ import (
 )
 
 var memoryGameMessages gt.MessageMap = gt.MessageMap{
-	"FLIP_CARD":      FlipCard,
-	"REMOVE_MATCHES": RemoveMatches,
-	"FLIP_ALL_BACK":  FlipAllBack,
-	"RESTART_GAME":   RestartGame,
+	"FLIP_CARD":         FlipCard,
+	"REMOVE_MATCHES":    RemoveMatches,
+	"FLIP_ALL_BACK":     FlipAllBack,
+	"RESTART_GAME":      RestartGame,
+	"CHANGE_DIFFICULTY": ChangeDifficulty,
+	"SUBMIT_INITIALS":   SubmitInitials,
+}
+
+type Difficulty int
+
+const (
+	Easy Difficulty = iota
+	Medium
+	Hard
+)
+
+func (d Difficulty) String() string {
+	return [...]string{"Easy", "Medium", "Hard"}[d]
+}
+
+func (d Difficulty) Pairs() int {
+	return [...]int{6, 8, 12}[d]
 }
 
 type MemoryGame struct {
@@ -23,6 +42,9 @@ type MemoryGame struct {
 	TurnsTaken        int
 	Score             int
 	BestScore         int
+	Difficulty        Difficulty
+	Leaderboard       *Leaderboard
+	AskingForInitials bool
 }
 
 func (m *MemoryGame) takeTurn() {
@@ -75,16 +97,49 @@ func FlipCard(m gt.Message, s gt.State) gt.Response {
 	return gt.Respond()
 }
 
+func ChangeDifficulty(m gt.Message, s gt.State) gt.Response {
+	state := model(s)
+	newDifficulty := Difficulty(m.ArgsToInt())
+	state.MemoryGame.Difficulty = newDifficulty
+	state.MemoryGame.Deck = NewDeck(newDifficulty.Pairs())
+	state.MemoryGame.resetScores()
+	return gt.Respond()
+}
+
 func RestartGame(_ gt.Message, s gt.State) gt.Response {
 	state := model(s)
-	state.MemoryGame.Deck.reset()
+	state.MemoryGame.Deck = NewDeck(state.MemoryGame.Difficulty.Pairs())
 	state.MemoryGame.resetScores()
+	state.MemoryGame.AskingForInitials = false
 	return gt.Respond()
 }
 
 func FlipAllBack(_ gt.Message, s gt.State) gt.Response {
 	state := model(s)
 	state.MemoryGame.Deck.flipAllBack()
+	return gt.Respond()
+}
+
+func SubmitInitials(m gt.Message, s gt.State) gt.Response {
+	state := model(s)
+	initials := m.ArgsToString()
+	
+	// Basic validation
+	if len(initials) > 3 {
+		initials = initials[:3]
+	}
+	initials = strings.ToUpper(initials)
+
+	score := HighScore{
+		Initials: initials,
+		Score:    state.MemoryGame.TurnsTaken,
+		Date:     time.Now(),
+	}
+
+	state.MemoryGame.Leaderboard.AddScore(state.MemoryGame.Difficulty, score)
+	state.MemoryGame.Leaderboard.Save()
+	state.MemoryGame.AskingForInitials = false
+
 	return gt.Respond()
 }
 
@@ -95,6 +150,10 @@ func RemoveMatches(_ gt.Message, s gt.State) gt.Response {
 	if state.MemoryGame.HasWon() {
 		if state.MemoryGame.BestScore == 0 || state.MemoryGame.TurnsTaken < state.MemoryGame.BestScore {
 			state.MemoryGame.BestScore = state.MemoryGame.TurnsTaken
+		}
+
+		if state.MemoryGame.Leaderboard.IsHighScore(state.MemoryGame.Difficulty, state.MemoryGame.TurnsTaken) {
+			state.MemoryGame.AskingForInitials = true
 		}
 	}
 
@@ -166,6 +225,12 @@ func (game MemoryGame) render() h.Element {
 	return h.Div(
 		a.Attrs(a.Class("space-y-6")),
 		h.Div(
+			a.Attrs(a.Class("flex justify-center space-x-4")),
+			renderDifficultyButton(Easy, game.Difficulty),
+			renderDifficultyButton(Medium, game.Difficulty),
+			renderDifficultyButton(Hard, game.Difficulty),
+		),
+		h.Div(
 			a.Attrs(a.Class("grid grid-cols-3 gap-4 text-center")),
 			h.Div(
 				a.Attrs(a.Class("bg-white p-4 rounded-lg shadow")),
@@ -183,19 +248,108 @@ func (game MemoryGame) render() h.Element {
 				h.P(a.Attrs(a.Class("mt-1 text-3xl font-semibold text-gray-900")), h.Text(fmt.Sprintf("%d", game.BestScore))),
 			),
 		),
-		game.Deck.render(),
+		game.Deck.render(game.Difficulty),
 		game.renderStatus(),
+		game.renderLeaderboard(),
+	)
+}
+
+func (game MemoryGame) renderLeaderboard() h.Element {
+	scores := game.Leaderboard.GetScores(game.Difficulty)
+	if len(scores) == 0 {
+		return h.Nothing(a.Attrs())
+	}
+
+	return h.Div(
+		a.Attrs(a.Class("mt-8 bg-white p-6 rounded-lg shadow")),
+		h.H3(a.Attrs(a.Class("text-lg font-medium text-gray-900 mb-4 text-center")), h.Text(fmt.Sprintf("%s Leaderboard", game.Difficulty))),
+		h.Div(
+			a.Attrs(a.Class("flex flex-col")),
+			h.Div(
+				a.Attrs(a.Class("-my-2 overflow-x-auto sm:-mx-6 lg:-mx-8")),
+				h.Div(
+					a.Attrs(a.Class("py-2 align-middle inline-block min-w-full sm:px-6 lg:px-8")),
+					h.Div(
+						a.Attrs(a.Class("shadow overflow-hidden border-b border-gray-200 sm:rounded-lg")),
+						h.Div(
+							a.Attrs(a.Class("min-w-full divide-y divide-gray-200")),
+							h.Div(
+								a.Attrs(a.Class("bg-gray-50 grid grid-cols-4 gap-4 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider")),
+								h.Div(a.Attrs(), h.Text("Rank")),
+								h.Div(a.Attrs(), h.Text("Initials")),
+								h.Div(a.Attrs(), h.Text("Score")),
+								h.Div(a.Attrs(), h.Text("Date")),
+							),
+							h.Div(
+								a.Attrs(a.Class("bg-white divide-y divide-gray-200")),
+								func() []h.Element {
+									var rows []h.Element
+									for i, score := range scores {
+										rows = append(rows, h.Div(
+											a.Attrs(a.Class("grid grid-cols-4 gap-4 px-6 py-4 whitespace-nowrap text-sm text-gray-500")),
+											h.Div(a.Attrs(), h.Text(fmt.Sprintf("%d", i+1))),
+											h.Div(a.Attrs(a.Class("font-medium text-gray-900")), h.Text(score.Initials)),
+											h.Div(a.Attrs(), h.Text(fmt.Sprintf("%d", score.Score))),
+											h.Div(a.Attrs(), h.Text(score.Date.Format("Jan 02"))),
+										))
+									}
+									return rows
+								}()...,
+							),
+						),
+					),
+				),
+			),
+		),
+	)
+}
+
+func renderDifficultyButton(d, current Difficulty) h.Element {
+	classes := "px-4 py-2 rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+	if d == current {
+		classes += " bg-indigo-600 text-white"
+	} else {
+		classes += " bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
+	}
+
+	return h.Button(
+		a.Attrs(a.Class(classes), a.OnClick(gt.SendBasicMessage("CHANGE_DIFFICULTY", int(d)))),
+		h.Text(d.String()),
 	)
 }
 
 func (game MemoryGame) renderStatus() h.Element {
 	if game.HasWon() {
-		return renderGameWon()
+		return game.renderGameWon()
 	}
 	return renderGameOngoing()
 }
 
-func renderGameWon() h.Element {
+func (game MemoryGame) renderGameWon() h.Element {
+	if game.AskingForInitials {
+		return h.Div(
+			a.Attrs(a.Class("text-center space-y-4 bg-yellow-50 p-6 rounded-lg border border-yellow-200")),
+			h.H2(a.Attrs(a.Class("text-3xl font-bold text-yellow-600")), h.Text("New High Score!")),
+			h.P(a.Attrs(a.Class("text-gray-700")), h.Text("Enter your initials to join the leaderboard:")),
+			h.Div(
+				a.Attrs(a.Class("flex justify-center space-x-2")),
+				h.Input(
+					a.Attrs(
+						a.Id("initials-input"),
+						a.Type("text"),
+						a.MaxLength(3),
+						a.Class("w-20 text-center uppercase text-2xl font-bold border-2 border-yellow-400 rounded-md focus:ring-yellow-500 focus:border-yellow-500"),
+						a.Placeholder("AAA"),
+					),
+				),
+				h.Button(
+					a.Attrs(a.Class("inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"), a.OnClick(gt.SendBasicMessageWithValueFromInput("SUBMIT_INITIALS", "initials-input"))),
+					h.Text("Submit"),
+				),
+			),
+		)
+	}
+
 	return h.Div(
 		a.Attrs(a.Class("text-center space-y-4")),
 		h.H2(a.Attrs(a.Class("text-3xl font-bold text-green-600")), h.Text("Well Done! You Won!")),
@@ -210,9 +364,14 @@ func renderGameOngoing() h.Element {
 	return h.Div(a.Attrs(a.Class("text-center text-gray-500 italic")), h.Text("Keep going!"))
 }
 
-func (deck Deck) render() h.Element {
+func (deck Deck) render(d Difficulty) h.Element {
+	gridCols := "grid-cols-4"
+	if d == Hard {
+		gridCols = "grid-cols-6"
+	}
+
 	return h.Div(
-		a.Attrs(a.Id("deck"), a.Class("grid grid-cols-4 gap-4")),
+		a.Attrs(a.Id("deck"), a.Class(fmt.Sprintf("grid %s gap-4", gridCols))),
 		func() []h.Element {
 			var elements []h.Element
 			for index, card := range deck {
