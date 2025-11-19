@@ -32,14 +32,14 @@ func model(s gt.State) *Model {
 	return s.(*Model)
 }
 
-func (m Model) Init(sid uuid.UUID) gt.State {
+func (m *Model) Init(sid uuid.UUID) gt.State {
 	l, err := LoadLeaderboard()
 	if err != nil {
 		fmt.Printf("Error loading leaderboard: %v\n", err)
 		l = NewLeaderboard()
 	}
 
-	return &Model{
+	model := &Model{
 		sessionID: sid,
 		MemoryGame: MemoryGame{
 			Deck:              NewDeck(Medium.Pairs()),
@@ -73,9 +73,34 @@ func (m Model) Init(sid uuid.UUID) gt.State {
 			Messages: &messages,
 		},
 	}
+
+	// Register Routes
+	model.Register("/", func(s gt.State) []byte {
+		return renderHome(model.Counter).Bytes()
+	})
+	model.Register("/memory", func(s gt.State) []byte {
+		return model.MemoryGame.render().Bytes()
+	})
+	model.Register("/form", func(s gt.State) []byte {
+		return model.Form.render().Bytes()
+	})
+	model.Register("/components", func(s gt.State) []byte {
+		return renderComponents(model.NameSelector, model.TeamSelector).Bytes()
+	})
+	model.Register("/routing", func(s gt.State) []byte {
+		return model.renderRouting().Bytes()
+	})
+	model.Register("/animation", func(s gt.State) []byte {
+		return model.Animation.render().Bytes()
+	})
+	model.Register("/chat", func(s gt.State) []byte {
+		return model.Chat.render().Bytes()
+	})
+
+	return model
 }
 
-func (m Model) Update() gt.MessageMap {
+func (m *Model) Update() gt.MessageMap {
 	return gt.MergeMaps(
 		memoryGameMessages,
 		formMessages,
@@ -104,11 +129,12 @@ func (m *Model) OnRouteChange(path string) {
 	m.RouteData = rand.Intn((100 * n) + 100)
 
 	m.TemplateName = template
+	fmt.Printf("Route changed to %s\n", path)
 }
 
 // Rendering
 
-func (m Model) Render() []byte {
+func (m *Model) Render() []byte {
 	el := h.Html(
 		a.Attrs(a.Lang("en")),
 		h.Head(
@@ -154,7 +180,7 @@ func (m Model) Render() []byte {
 					a.Attrs(a.Class("px-4 py-6 sm:px-0")),
 					h.Div(
 						a.Attrs(a.Class("border-4 border-dashed border-gray-200 rounded-lg p-4 bg-white")),
-						h.Div(a.Attrs(a.Id("view")), m.RenderView()),
+						h.Div(a.Attrs(a.Id("view")), h.UnsafeRaw(string(m.RenderRoute(m)))),
 					),
 				),
 			),
@@ -184,11 +210,11 @@ func navLink(href, text string, active bool) h.Element {
 	return h.A(a.Attrs(a.Href(href), a.Class(classes)), h.Text(text))
 }
 
-func (m Model) RenderError(err error) []byte {
+func (m *Model) RenderError(err error) []byte {
 	return []byte(fmt.Sprintf("An error occurred: %s", err.Error()))
 }
 
-func (m Model) RenderView() h.Element {
+func (m *Model) RenderView() h.Element {
 	switch m.TemplateName {
 	case "/home":
 		return renderHome(m.Counter)
@@ -221,7 +247,7 @@ func renderHome(counter int) h.Element {
 	)
 }
 
-func (m Model) renderRouting() h.Element {
+func (m *Model) renderRouting() h.Element {
 	return h.Div(
 		a.Attrs(a.Class("space-y-6")),
 		h.H2(a.Attrs(a.Class("text-2xl font-bold text-gray-900")), h.Text("Routing")),

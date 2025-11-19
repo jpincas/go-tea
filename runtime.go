@@ -20,11 +20,33 @@ const (
 
 // Router is embedded by the application model to provide routing functionality
 type Router struct {
-	Route string
+	Route  string
+	routes map[string]RouteHandler
 }
+
+type RouteHandler func(State) []byte
 
 func (r *Router) SetNewRoute(route string) {
 	r.Route = route
+}
+
+func (r *Router) Register(path string, handler RouteHandler) {
+	if r.routes == nil {
+		r.routes = make(map[string]RouteHandler)
+	}
+	r.routes[path] = handler
+}
+
+func (r Router) RenderRoute(state State) []byte {
+	handler, ok := r.routes[r.Route]
+	if !ok {
+		// Try to find a default route or return nil/error page
+		// For now, let's check if there is a "/" handler as fallback if exact match fails?
+		// Or maybe the user should register a 404 handler.
+		// Let's return nil and let the user handle it if they want, or maybe return a simple 404.
+		return []byte("404 Not Found")
+	}
+	return handler(state)
 }
 
 func (r Router) RouteParam(param string) string {
