@@ -109,32 +109,71 @@ func (m Model) Render() []byte {
 			h.Meta(a.Attrs(a.Name("viewport"), a.Content("width=device-width, initial-scale=1.0"))),
 			h.Meta(a.Attrs(a.HttpEquiv("X-UA-Compatible"), a.Content("ie=edge"))),
 			h.Title(a.Attrs(), h.Text(m.TemplateName)),
-			h.Link(a.Attrs(a.Rel("stylesheet"), a.Href("static/styles.css"))),
+			h.Script(a.Attrs(a.Src("https://cdn.tailwindcss.com"))),
 			h.Link(a.Attrs(a.Rel("icon"), a.Type("image/png"), a.Href("data:image/png;base64,iVBORw0KGgo="))),
 		),
 		h.Body(
-			a.Attrs(),
-			h.Div(
-				a.Attrs(a.Class("navbar")),
-				h.Ul(
-					a.Attrs(),
-					h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/")), h.Text("Home"))),
-					h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/memory")), h.Text("Memory Game"))),
-					h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/form")), h.Text("Form"))),
-					h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/components")), h.Text("Components"))),
-					h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/routing")), h.Text("Routing"))),
-					h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/animation")), h.Text("Animation"))),
-					h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/chat")), h.Text("Chat"))),
-					h.Li(a.Attrs(), h.Text(fmt.Sprintf("Current Route: %s", m.Router.Route))),
-					h.Li(a.Attrs(), h.Text(fmt.Sprintf("SID: %s", m.sessionID.String()))),
+			a.Attrs(a.Class("bg-gray-100 min-h-screen font-sans text-gray-800")),
+			h.Nav(
+				a.Attrs(a.Class("bg-white shadow-md")),
+				h.Div(
+					a.Attrs(a.Class("max-w-7xl mx-auto px-4 sm:px-6 lg:px-8")),
+					h.Div(
+						a.Attrs(a.Class("flex justify-between h-16")),
+						h.Div(
+							a.Attrs(a.Class("flex")),
+							h.Div(
+								a.Attrs(a.Class("flex-shrink-0 flex items-center")),
+								h.Span(a.Attrs(a.Class("font-bold text-xl text-indigo-600")), h.Text("🍵 Gotea")),
+							),
+							h.Div(
+								a.Attrs(a.Class("hidden sm:ml-6 sm:flex sm:space-x-8")),
+								navLink("/", "Home", m.Router.Route == "/"),
+								navLink("/memory", "Memory Game", m.Router.Route == "/memory"),
+								navLink("/form", "Form", m.Router.Route == "/form"),
+								navLink("/components", "Components", m.Router.Route == "/components"),
+								navLink("/routing", "Routing", m.Router.Route == "/routing"),
+								navLink("/animation", "Animation", m.Router.Route == "/animation"),
+								navLink("/chat", "Chat", m.Router.Route == "/chat"),
+							),
+						),
+					),
 				),
 			),
-			h.Div(a.Attrs(a.Id("view")), m.RenderView()),
+			h.Main(
+				a.Attrs(a.Class("max-w-7xl mx-auto py-6 sm:px-6 lg:px-8")),
+				h.Div(
+					a.Attrs(a.Class("px-4 py-6 sm:px-0")),
+					h.Div(
+						a.Attrs(a.Class("border-4 border-dashed border-gray-200 rounded-lg p-4 bg-white")),
+						h.Div(a.Attrs(a.Id("view")), m.RenderView()),
+					),
+				),
+			),
+			h.Div(
+				a.Attrs(a.Class("bg-white border-t border-gray-200 mt-auto")),
+				h.Div(
+					a.Attrs(a.Class("max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8")),
+					h.P(a.Attrs(a.Class("text-center text-gray-500 text-sm")), 
+						h.Text(fmt.Sprintf("Session ID: %s | Current Route: %s", m.sessionID.String(), m.Router.Route)),
+					),
+				),
+			),
 			h.Script(a.Attrs(a.Src("static/main.js"))),
 		),
 	)
 
 	return el.Bytes()
+}
+
+func navLink(href, text string, active bool) h.Element {
+	classes := "inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+	if active {
+		classes += " border-indigo-500 text-gray-900"
+	} else {
+		classes += " border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+	}
+	return h.A(a.Attrs(a.Href(href), a.Class(classes)), h.Text(text))
 }
 
 func (m Model) RenderError(err error) []byte {
@@ -165,35 +204,62 @@ func (m Model) RenderView() h.Element {
 // Placeholder functions for individual template rendering
 func renderHome(counter int) h.Element {
 	return h.Div(
-		a.Attrs(),
-		h.H2(a.Attrs(), h.Text("Gotea Demo Site")),
-		h.P(a.Attrs(), h.Text("Choose an example from the menu to get started, or have a play with the classic 'counter' example below:")),
+		a.Attrs(a.Class("space-y-6")),
+		h.H2(a.Attrs(a.Class("text-2xl font-bold text-gray-900")), h.Text("Gotea Demo Site")),
+		h.P(a.Attrs(a.Class("text-gray-600")), h.Text("Choose an example from the menu to get started, or have a play with the classic 'counter' example below:")),
 		renderCounter(counter),
-		h.Hr(a.Attrs()),
+		h.Hr(a.Attrs(a.Class("my-8 border-gray-300"))),
 		renderCrash(),
 	)
 }
 
 func (m Model) renderRouting() h.Element {
 	return h.Div(
-		a.Attrs(),
-		h.H2(a.Attrs(), h.Text("Routing")),
-		h.H3(a.Attrs(), h.Text(fmt.Sprintf("Current Route: %s", m.GetRoute()))),
-		h.P(a.Attrs(), h.Text("The main navigation bar above is an example of GoTea routing.")),
-		h.P(a.Attrs(), h.Text("Clicking on any of the links triggers a \"CHANGE_ROUTE\" message to be sent, with the new route as an argument. The app-provided routing function then decides whether to change the view template and performs any route-conditional logic.")),
-		h.H3(a.Attrs(), h.Text("Here's an internal link:")),
-		h.A(a.Attrs(a.Href("/memory")), h.Text("Memory Game")),
-		h.H3(a.Attrs(), h.Text("Here's an external link:")),
-		h.A(a.Attrs(a.Class("external"), a.Target("_blank"), a.Href("https://duckduckgo.com")), h.Text("Search DuckDuckGo")),
-		h.H3(a.Attrs(), h.Text("Route Parameters")),
-		h.Ul(
-			a.Attrs(),
-			h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/routing?myparam=1")), h.Text("myparam = 1"))),
-			h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/routing?myparam=2")), h.Text("myparam = 2"))),
-			h.Li(a.Attrs(), h.A(a.Attrs(a.Href("/routing?myparam=3")), h.Text("myparam = 3"))),
+		a.Attrs(a.Class("space-y-6")),
+		h.H2(a.Attrs(a.Class("text-2xl font-bold text-gray-900")), h.Text("Routing")),
+		h.Div(
+			a.Attrs(a.Class("bg-blue-50 p-4 rounded-md border border-blue-200")),
+			h.H3(a.Attrs(a.Class("text-lg font-medium text-blue-900")), h.Text(fmt.Sprintf("Current Route: %s", m.GetRoute()))),
 		),
-		h.H4(a.Attrs(), h.Text(fmt.Sprintf("Value of 'myparam': %s", m.RouteParam("myparam")))),
-		h.H3(a.Attrs(), h.Text(fmt.Sprintf("A random number generated before rendering by the routing hook (a simple representation of route-specific data loading): %d", m.RouteData))),
+		h.P(a.Attrs(a.Class("text-gray-600")), h.Text("The main navigation bar above is an example of GoTea routing.")),
+		h.P(a.Attrs(a.Class("text-gray-600")), h.Text("Clicking on any of the links triggers a \"CHANGE_ROUTE\" message to be sent, with the new route as an argument. The app-provided routing function then decides whether to change the view template and performs any route-conditional logic.")),
+		
+		h.Div(
+			a.Attrs(a.Class("grid grid-cols-1 md:grid-cols-2 gap-6")),
+			h.Div(
+				a.Attrs(a.Class("bg-white p-6 rounded-lg shadow-sm border border-gray-200")),
+				h.H3(a.Attrs(a.Class("text-lg font-medium text-gray-900 mb-4")), h.Text("Internal Link")),
+				h.A(a.Attrs(a.Class("text-indigo-600 hover:text-indigo-900 underline"), a.Href("/memory")), h.Text("Go to Memory Game")),
+			),
+			h.Div(
+				a.Attrs(a.Class("bg-white p-6 rounded-lg shadow-sm border border-gray-200")),
+				h.H3(a.Attrs(a.Class("text-lg font-medium text-gray-900 mb-4")), h.Text("External Link")),
+				h.A(a.Attrs(a.Class("text-indigo-600 hover:text-indigo-900 underline flex items-center"), a.Target("_blank"), a.Href("https://duckduckgo.com")), 
+					h.Text("Search DuckDuckGo"),
+					h.Span(a.Attrs(a.Class("ml-1 text-sm")), h.Text("↗")),
+				),
+			),
+		),
+
+		h.Div(
+			a.Attrs(a.Class("bg-white p-6 rounded-lg shadow-sm border border-gray-200")),
+			h.H3(a.Attrs(a.Class("text-lg font-medium text-gray-900 mb-4")), h.Text("Route Parameters")),
+			h.Ul(
+				a.Attrs(a.Class("space-y-2 mb-6")),
+				h.Li(a.Attrs(), h.A(a.Attrs(a.Class("text-indigo-600 hover:text-indigo-900"), a.Href("/routing?myparam=1")), h.Text("myparam = 1"))),
+				h.Li(a.Attrs(), h.A(a.Attrs(a.Class("text-indigo-600 hover:text-indigo-900"), a.Href("/routing?myparam=2")), h.Text("myparam = 2"))),
+				h.Li(a.Attrs(), h.A(a.Attrs(a.Class("text-indigo-600 hover:text-indigo-900"), a.Href("/routing?myparam=3")), h.Text("myparam = 3"))),
+			),
+			h.Div(
+				a.Attrs(a.Class("bg-gray-50 p-4 rounded-md")),
+				h.H4(a.Attrs(a.Class("font-medium text-gray-700")), h.Text(fmt.Sprintf("Value of 'myparam': %s", m.RouteParam("myparam")))),
+			),
+		),
+
+		h.Div(
+			a.Attrs(a.Class("bg-yellow-50 p-4 rounded-md border border-yellow-200")),
+			h.H3(a.Attrs(a.Class("text-sm text-yellow-800")), h.Text(fmt.Sprintf("A random number generated before rendering by the routing hook (a simple representation of route-specific data loading): %d", m.RouteData))),
+		),
 	)
 }
 

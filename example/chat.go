@@ -61,41 +61,66 @@ func SendMessage(m gt.Message, s gt.State) gt.Response {
 
 func (chat Chat) render() h.Element {
 	return h.Div(
-		a.Attrs(),
-		h.H2(a.Attrs(), h.Text("Chat Room")),
+		a.Attrs(a.Class("space-y-6")),
+		h.H2(a.Attrs(a.Class("text-2xl font-bold text-gray-900")), h.Text("Chat Room")),
+		
 		h.Div(
-			a.Attrs(),
-			h.Label(a.Attrs(a.For("usernameInput")), h.Text("Enter your username:")),
-			h.Input(a.Attrs(a.Type("text"), a.Id("usernameInput"), a.Value(chat.Username), a.Class("username-input"))),
-			h.Button(
-				a.Attrs(a.OnClick(gt.SendBasicMessageWithValueFromInput("SET_USERNAME", "usernameInput")), a.Class("set-username-button")),
-				h.Text("Set Username"),
+			a.Attrs(a.Class("bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-4")),
+			h.Div(
+				a.Attrs(a.Class("flex items-end space-x-2")),
+				h.Div(
+					a.Attrs(a.Class("flex-grow")),
+					h.Label(a.Attrs(a.For("usernameInput"), a.Class("block text-sm font-medium text-gray-700 mb-1")), h.Text("Enter your username:")),
+					h.Input(a.Attrs(a.Type("text"), a.Id("usernameInput"), a.Value(chat.Username), a.Class("block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"))),
+				),
+				h.Button(
+					a.Attrs(a.OnClick(gt.SendBasicMessageWithValueFromInput("SET_USERNAME", "usernameInput")), a.Class("inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500")),
+					h.Text("Set Username"),
+				),
 			),
 		),
+
 		h.Div(
-			a.Attrs(a.Id("messages")),
+			a.Attrs(a.Id("messages"), a.Class("bg-gray-50 p-4 rounded-lg border border-gray-200 h-96 overflow-y-auto space-y-4")),
 			func() []h.Element {
 				var elements []h.Element
 				for _, msg := range *chat.Messages {
-					class := "message-right"
+					containerClass := "flex justify-start"
+					bubbleClass := "bg-white text-gray-800 border border-gray-200"
+					
 					if msg.User == chat.Username {
-						class = "message-left"
+						containerClass = "flex justify-end"
+						bubbleClass = "bg-indigo-100 text-indigo-900 border border-indigo-200"
 					}
+					
 					elements = append(elements, h.Div(
-						a.Attrs(a.Class(class)),
-						h.Span(a.Attrs(a.Class("message-username")), h.Text(msg.User)),
-						h.Span(a.Attrs(a.Class("message-timestamp")), h.Text(msg.TimeStamp.Format("15:04:05"))),
-						h.P(a.Attrs(a.Class("message-text")), h.Text(msg.Text)),
+						a.Attrs(a.Class(containerClass)),
+						h.Div(
+							a.Attrs(a.Class(fmt.Sprintf("max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow-sm %s", bubbleClass))),
+							h.Div(
+								a.Attrs(a.Class("flex justify-between items-baseline mb-1 space-x-2")),
+								h.Span(a.Attrs(a.Class("font-bold text-xs")), h.Text(msg.User)),
+								h.Span(a.Attrs(a.Class("text-xs opacity-75")), h.Text(msg.TimeStamp.Format("15:04"))),
+							),
+							h.P(a.Attrs(a.Class("text-sm")), h.Text(msg.Text)),
+						),
 					))
 				}
 				return elements
 			}()...,
 		),
-		h.P(a.Attrs(a.Class("username-display")), h.Text(fmt.Sprintf("Posting as %s", chat.Username))),
-		h.Input(a.Attrs(a.Type("text"), a.Id("messageInput"), a.Placeholder("Your message"), a.Class("message-input"))),
-		h.Button(
-			a.Attrs(a.OnClick(gt.SendBasicMessageWithValueFromInput("SEND_MESSAGE", "messageInput")), a.Class("send-button")),
-			h.Text("Send"),
+
+		h.Div(
+			a.Attrs(a.Class("bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-4")),
+			h.P(a.Attrs(a.Class("text-sm text-gray-500 italic")), h.Text(fmt.Sprintf("Posting as %s", chat.Username))),
+			h.Div(
+				a.Attrs(a.Class("flex space-x-2")),
+				h.Input(a.Attrs(a.Type("text"), a.Id("messageInput"), a.Placeholder("Type your message..."), a.Class("block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"))),
+				h.Button(
+					a.Attrs(a.OnClick(gt.SendBasicMessageWithValueFromInput("SEND_MESSAGE", "messageInput")), a.Class("inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500")),
+					h.Text("Send"),
+				),
+			),
 		),
 	)
 }

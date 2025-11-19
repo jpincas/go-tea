@@ -29,10 +29,10 @@ func (f Form) String() string {
 
 func (f Form) renderValues() h.Element {
 	return h.Div(
-		a.Attrs(),
-		h.H2(a.Attrs(), h.Text("Form Values")),
+		a.Attrs(a.Class("bg-gray-50 p-4 rounded-lg shadow-inner")),
+		h.H2(a.Attrs(a.Class("text-lg font-medium text-gray-900 mb-4")), h.Text("Form Values")),
 		h.Ul(
-			a.Attrs(),
+			a.Attrs(a.Class("space-y-2 text-sm text-gray-600")),
 			h.Li(a.Attrs(), h.Text(fmt.Sprintf("TextInput: %s", f.TextInput))),
 			h.Li(a.Attrs(), h.Text(fmt.Sprintf("TextboxInput: %s", f.TextboxInput))),
 			h.Li(a.Attrs(), h.Text(fmt.Sprintf("SelectInput: %s", f.SelectInput))),
@@ -58,78 +58,148 @@ func formUpdate(m gt.Message, s gt.State) gt.Response {
 // Render
 func (form Form) render() h.Element {
 	return h.Div(
-		a.Attrs(),
-		h.H1(a.Attrs(), h.Text("Form Example")),
+		a.Attrs(a.Class("space-y-6")),
+		h.H1(a.Attrs(a.Class("text-2xl font-bold text-gray-900")), h.Text("Form Example")),
 		h.Div(
-			a.Attrs(a.Class("row")),
+			a.Attrs(a.Class("grid grid-cols-1 md:grid-cols-2 gap-8")),
 			h.Form(
-				a.Attrs(a.Class("equalchild"), a.Id("my-form")),
-				h.H2(a.Attrs(), h.Text("Text Input")),
-				h.Input(
-					a.Attrs(
-						a.Class("input"),
-						a.Type("text"),
-						a.Placeholder("Some simple text input"),
-						a.Value(form.TextInput),
-						a.Name("textInput"),
-						a.OnKeyUp(gt.BasicUpdateForm("FORM_UPDATE", "my-form")),
+				a.Attrs(a.Class("space-y-6"), a.Id("my-form")),
+				
+				h.Div(
+					a.Attrs(),
+					h.Label(a.Attrs(a.Class("block text-sm font-medium text-gray-700")), h.Text("Text Input")),
+					h.Input(
+						a.Attrs(
+							a.Class("mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"),
+							a.Type("text"),
+							a.Placeholder("Some simple text input"),
+							a.Value(form.TextInput),
+							a.Name("textInput"),
+							a.OnKeyUp(gt.BasicUpdateForm("FORM_UPDATE", "my-form")),
+						),
 					),
 				),
-				h.H2(a.Attrs(), h.Text("Simple Select")),
-				h.Select(
-					a.Attrs(a.Name("selectInput"), a.OnChange(gt.BasicUpdateForm("FORM_UPDATE", "my-form"))),
-					func() []h.Element {
-						var options []h.Element
-						for _, option := range form.Options {
-							options = append(options, h.Option(
+
+				h.Div(
+					a.Attrs(),
+					h.Label(a.Attrs(a.Class("block text-sm font-medium text-gray-700")), h.Text("Simple Select")),
+					h.Select(
+						a.Attrs(
+							a.Class("mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"),
+							a.Name("selectInput"), 
+							a.OnChange(gt.BasicUpdateForm("FORM_UPDATE", "my-form")),
+						),
+						func() []h.Element {
+							var options []h.Element
+							for _, option := range form.Options {
+								options = append(options, h.Option(
+									a.Attrs(
+										a.Value(option),
+										func() a.Attribute {
+											if form.SelectInput == option {
+												return a.Selected(true)
+											}
+											return a.Selected(false)
+										}(),
+									),
+									h.Text(option),
+								))
+							}
+							return options
+						}()...,
+					),
+				),
+
+				h.Div(
+					a.Attrs(),
+					h.Label(a.Attrs(a.Class("block text-sm font-medium text-gray-700")), h.Text("Multiple Select")),
+					h.Select(
+						a.Attrs(
+							a.Class("mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"),
+							a.Name("MultipleTextInput"), 
+							a.OnChange(gt.BasicUpdateForm("FORM_UPDATE", "my-form")), 
+							a.Size(4), 
+							a.Multiple(true),
+						),
+						h.Option(a.Attrs(a.Value("first"), form.isSelected("first", form.MultipleTextInput)), h.Text("first")),
+						h.Option(a.Attrs(a.Value("second"), form.isSelected("second", form.MultipleTextInput)), h.Text("second")),
+						h.Option(a.Attrs(a.Value("third"), form.isSelected("third", form.MultipleTextInput)), h.Text("third")),
+						h.Option(a.Attrs(a.Value("fourth"), form.isSelected("fourth", form.MultipleTextInput)), h.Text("fourth")),
+					),
+				),
+
+				h.Div(
+					a.Attrs(),
+					h.Label(a.Attrs(a.Class("block text-sm font-medium text-gray-700")), h.Text("Text Area")),
+					h.TextArea(
+						a.Attrs(
+							a.Class("mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"),
+							a.OnKeyUp(gt.BasicUpdateForm("FORM_UPDATE", "my-form")), 
+							a.Name("TextboxInput"), 
+							a.Rows(5),
+						),
+						h.Text(form.TextboxInput),
+					),
+				),
+
+				h.Div(
+					a.Attrs(),
+					h.Label(a.Attrs(a.Class("block text-sm font-medium text-gray-700")), h.Text("Radio")),
+					h.Div(
+						a.Attrs(a.Class("mt-2 space-y-2")),
+						h.Div(
+							a.Attrs(a.Class("flex items-center")),
+							h.Input(
 								a.Attrs(
-									a.Value(option),
-									func() a.Attribute {
-										if form.SelectInput == option {
-											return a.Selected(true)
-										}
-										return a.Selected(false)
-									}(),
+									a.Class("h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"),
+									a.Type("radio"), 
+									a.Name("RadioTextInput"), 
+									a.Value("male"), 
+									a.OnChange(gt.BasicUpdateForm("FORM_UPDATE", "my-form")), 
+									form.isChecked("male", form.RadioTextInput),
 								),
-								h.Text(option),
-							))
-						}
-						return options
-					}()...,
+							),
+							h.Label(a.Attrs(a.Class("ml-3 block text-sm font-medium text-gray-700")), h.Text("Male")),
+						),
+						h.Div(
+							a.Attrs(a.Class("flex items-center")),
+							h.Input(
+								a.Attrs(
+									a.Class("h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"),
+									a.Type("radio"), 
+									a.Name("RadioTextInput"), 
+									a.Value("female"), 
+									a.OnChange(gt.BasicUpdateForm("FORM_UPDATE", "my-form")), 
+									form.isChecked("female", form.RadioTextInput),
+								),
+							),
+							h.Label(a.Attrs(a.Class("ml-3 block text-sm font-medium text-gray-700")), h.Text("Female")),
+						),
+					),
 				),
-				h.H2(a.Attrs(), h.Text("Multiple Select")),
-				h.Select(
-					a.Attrs(a.Name("MultipleTextInput"), a.OnChange(gt.BasicUpdateForm("FORM_UPDATE", "my-form")), a.Size(4), a.Multiple(true)),
-					h.Option(a.Attrs(a.Value("first"), form.isSelected("first", form.MultipleTextInput)), h.Text("first")),
-					h.Option(a.Attrs(a.Value("second"), form.isSelected("second", form.MultipleTextInput)), h.Text("second")),
-					h.Option(a.Attrs(a.Value("third"), form.isSelected("third", form.MultipleTextInput)), h.Text("third")),
-					h.Option(a.Attrs(a.Value("fourth"), form.isSelected("fourth", form.MultipleTextInput)), h.Text("fourth")),
+
+				h.Div(
+					a.Attrs(a.Class("flex items-start")),
+					h.Div(
+						a.Attrs(a.Class("flex h-5 items-center")),
+						h.Input(
+							a.Attrs(
+								a.Class("h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"),
+								a.Type("checkbox"), 
+								a.Name("CheckboxInput"), 
+								a.OnChange(gt.BasicUpdateForm("FORM_UPDATE", "my-form")), 
+								form.isCheckedBool(form.CheckboxInput),
+							),
+						),
+					),
+					h.Div(
+						a.Attrs(a.Class("ml-3 text-sm")),
+						h.Label(a.Attrs(a.Class("font-medium text-gray-700")), h.Text("True?")),
+					),
 				),
-				h.H2(a.Attrs(), h.Text("Text Area")),
-				h.TextArea(
-					a.Attrs(a.OnKeyUp(gt.BasicUpdateForm("FORM_UPDATE", "my-form")), a.Name("TextboxInput"), a.Rows(10), a.Cols(30)),
-					h.Text(form.TextboxInput),
-				),
-				h.H2(a.Attrs(), h.Text("Radio")),
-				h.Input(
-					a.Attrs(a.Type("radio"), a.Name("RadioTextInput"), a.Value("male"), a.OnChange(gt.BasicUpdateForm("FORM_UPDATE", "my-form")), form.isChecked("male", form.RadioTextInput)),
-				),
-				h.Text("Male"),
-				h.Input(
-					a.Attrs(a.Type("radio"), a.Name("RadioTextInput"), a.Value("female"), a.OnChange(gt.BasicUpdateForm("FORM_UPDATE", "my-form")), form.isChecked("female", form.RadioTextInput)),
-				),
-				h.Text("Female"),
-				h.H2(a.Attrs(), h.Text("Checkbox")),
-				h.Input(
-					a.Attrs(a.Type("checkbox"), a.Name("CheckboxInput"), a.OnChange(gt.BasicUpdateForm("FORM_UPDATE", "my-form")), form.isCheckedBool(form.CheckboxInput)),
-				),
-				h.Text("True?"),
 			),
-			h.Div(
-				a.Attrs(a.Class("equalchild")),
-				h.H2(a.Attrs(), h.Text("State")),
-				form.renderValues(),
-			),
+			
+			form.renderValues(),
 		),
 	)
 }

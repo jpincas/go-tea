@@ -164,10 +164,25 @@ func (deck Deck) reset() {
 // Render
 func (game MemoryGame) render() h.Element {
 	return h.Div(
-		a.Attrs(),
-		h.H2(a.Attrs(), h.Text(fmt.Sprintf("Turns Taken: %d", game.TurnsTaken))),
-		h.H2(a.Attrs(), h.Text(fmt.Sprintf("Pairs Found: %d", game.Score))),
-		h.H2(a.Attrs(), h.Text(fmt.Sprintf("Best Score: %d", game.BestScore))),
+		a.Attrs(a.Class("space-y-6")),
+		h.Div(
+			a.Attrs(a.Class("grid grid-cols-3 gap-4 text-center")),
+			h.Div(
+				a.Attrs(a.Class("bg-white p-4 rounded-lg shadow")),
+				h.H3(a.Attrs(a.Class("text-sm font-medium text-gray-500")), h.Text("Turns Taken")),
+				h.P(a.Attrs(a.Class("mt-1 text-3xl font-semibold text-gray-900")), h.Text(fmt.Sprintf("%d", game.TurnsTaken))),
+			),
+			h.Div(
+				a.Attrs(a.Class("bg-white p-4 rounded-lg shadow")),
+				h.H3(a.Attrs(a.Class("text-sm font-medium text-gray-500")), h.Text("Pairs Found")),
+				h.P(a.Attrs(a.Class("mt-1 text-3xl font-semibold text-gray-900")), h.Text(fmt.Sprintf("%d", game.Score))),
+			),
+			h.Div(
+				a.Attrs(a.Class("bg-white p-4 rounded-lg shadow")),
+				h.H3(a.Attrs(a.Class("text-sm font-medium text-gray-500")), h.Text("Best Score")),
+				h.P(a.Attrs(a.Class("mt-1 text-3xl font-semibold text-gray-900")), h.Text(fmt.Sprintf("%d", game.BestScore))),
+			),
+		),
 		game.Deck.render(),
 		game.renderStatus(),
 	)
@@ -182,22 +197,22 @@ func (game MemoryGame) renderStatus() h.Element {
 
 func renderGameWon() h.Element {
 	return h.Div(
-		a.Attrs(),
-		h.H2(a.Attrs(), h.Text("Well Done! You Won!")),
+		a.Attrs(a.Class("text-center space-y-4")),
+		h.H2(a.Attrs(a.Class("text-3xl font-bold text-green-600")), h.Text("Well Done! You Won!")),
 		h.Button(
-			a.Attrs(a.OnClick(gt.SendBasicMessageNoArgs("RESTART_GAME"))),
+			a.Attrs(a.Class("inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"), a.OnClick(gt.SendBasicMessageNoArgs("RESTART_GAME"))),
 			h.Text("New Game"),
 		),
 	)
 }
 
 func renderGameOngoing() h.Element {
-	return h.Div(a.Attrs(), h.Text("Keep going!"))
+	return h.Div(a.Attrs(a.Class("text-center text-gray-500 italic")), h.Text("Keep going!"))
 }
 
 func (deck Deck) render() h.Element {
 	return h.Div(
-		a.Attrs(a.Id("deck")),
+		a.Attrs(a.Id("deck"), a.Class("grid grid-cols-4 gap-4")),
 		func() []h.Element {
 			var elements []h.Element
 			for index, card := range deck {
@@ -210,7 +225,7 @@ func (deck Deck) render() h.Element {
 
 func (card Card) renderContainer(index int) h.Element {
 	return h.Div(
-		a.Attrs(a.Class("card-container")),
+		a.Attrs(a.Class("relative")),
 		card.render(),
 		card.renderFlipButton(index),
 	)
@@ -219,7 +234,7 @@ func (card Card) renderContainer(index int) h.Element {
 func (card Card) renderFlipButton(index int) h.Element {
 	if !card.Matched {
 		return h.Button(
-			a.Attrs(a.Class("flipcard"), a.OnClick(gt.SendBasicMessage("FLIP_CARD", index))),
+			a.Attrs(a.Class("absolute inset-0 w-full h-full opacity-0 cursor-pointer"), a.OnClick(gt.SendBasicMessage("FLIP_CARD", index))),
 			h.Text("Flip"),
 		)
 	}
@@ -232,23 +247,23 @@ func (card Card) render() h.Element {
 			a.Class(card.getClass()),
 		),
 		h.Span(
-			a.Attrs(a.Class("value")),
+			a.Attrs(a.Class("text-4xl font-bold")),
 			card.getValue(),
 		),
 	)
 }
 
 func (card Card) getClass() string {
-	classes := []string{"card"}
+	classes := []string{"h-32 flex items-center justify-center rounded-lg shadow-md transition-all duration-300"}
 	if card.Flipped {
-		classes = append(classes, "faceup")
+		classes = append(classes, "bg-white text-indigo-600 transform rotate-y-180")
 	} else {
-		classes = append(classes, "facedown")
+		classes = append(classes, "bg-indigo-600 text-white")
 	}
 	if card.Matched {
-		classes = append(classes, "matched")
+		classes = append(classes, "opacity-50 cursor-default")
 	} else {
-		classes = append(classes, "unmatched")
+		classes = append(classes, "cursor-pointer hover:shadow-lg")
 	}
 
 	// Join with a space

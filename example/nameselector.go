@@ -44,19 +44,22 @@ func nameSelectorSearchInputUpdate(m gt.Message, s gt.State) gt.Response {
 
 func renderComponents(nameSelector, tagSelector tagselector.Model) h.Element {
 	return h.Div(
-		a.Attrs(),
-		h.H2(a.Attrs(), h.Text("Components Demo")),
-		h.P(a.Attrs(), h.Text("Two instantiations of the 'tag selector' component, running side-by-side")),
+		a.Attrs(a.Class("space-y-8")),
 		h.Div(
-			a.Attrs(),
+			a.Attrs(a.Class("text-center")),
+			h.H2(a.Attrs(a.Class("text-2xl font-bold text-gray-900")), h.Text("Components Demo")),
+			h.P(a.Attrs(a.Class("mt-2 text-gray-600")), h.Text("Two instantiations of the 'tag selector' component, running side-by-side")),
+		),
+		h.Div(
+			a.Attrs(a.Class("grid grid-cols-1 md:grid-cols-2 gap-8")),
 			h.Div(
-				a.Attrs(),
-				h.H3(a.Attrs(), h.Text("Select a Name")),
+				a.Attrs(a.Class("space-y-4")),
+				h.H3(a.Attrs(a.Class("text-lg font-medium text-gray-900")), h.Text("Select a Name")),
 				nameSelector.Render(),
 			),
 			h.Div(
-				a.Attrs(),
-				h.H3(a.Attrs(), h.Text("Select a Team")),
+				a.Attrs(a.Class("space-y-4")),
+				h.H3(a.Attrs(a.Class("text-lg font-medium text-gray-900")), h.Text("Select a Team")),
 				tagSelector.Render(),
 			),
 		),

@@ -9,3 +9,5 @@ js/node_modules
 /example/gotea-example
 
 .parcel-cache
+
+example_app
