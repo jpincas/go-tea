@@ -6,7 +6,7 @@
     "clean": "rm -rf static/*.js static/*.map"
   },
   "devDependencies": {
-    "parcel": "^2.13.2"
+    "parcel": "^2.16.1"
   },
   "dependencies": {
     "gotea": "file:../js"

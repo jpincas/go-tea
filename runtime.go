@@ -112,6 +112,17 @@ type State interface {
 	RenderError(error) []byte
 }
 
+// Persistable is an optional interface that State can implement
+// to enable automatic state persistence across server restarts
+type Persistable interface {
+	// Serialize returns a JSON-serializable representation of state
+	Serialize() ([]byte, error)
+
+	// Deserialize restores state from serialized bytes
+	// Returns error if state is invalid/corrupted
+	Deserialize([]byte) error
+}
+
 // onConnect is the Melody handler that is called when a new session is established
 // It is responsible for setting up the initial state of the session, including routing
 func onConnect(model State) func(s *melody.Session) {
@@ -133,6 +144,22 @@ func onConnect(model State) func(s *melody.Session) {
 		s.Request.ParseForm()
 		startingRoute := s.Request.URL.Query().Get("whence")
 		changeRoute(state, startingRoute)
+
+		// Check if client is sending restored state
+		restoredState := s.Request.URL.Query().Get("restored_state")
+		if restoredState != "" && restoredState != "null" {
+			if persistable, ok := state.(Persistable); ok {
+				if err := persistable.Deserialize([]byte(restoredState)); err != nil {
+					log.Printf("Failed to restore state: %v", err)
+					// Continue with fresh state
+				} else {
+					log.Printf("Successfully restored state for session %s", cookie.Value)
+					// If we restored state, we need to send the updated view to the client
+					// because the initial HTTP render would have been blank/default
+					s.Write(state.Render())
+				}
+			}
+		}
 
 		s.Set(melodyStateKey, state)
 	}
@@ -312,6 +339,20 @@ func (message Message) process(s *melody.Session, state State) error {
 	// Now we can render the new state
 	if !message.BlockRerender {
 		s.Write(state.Render())
+
+		// If state is persistable, send snapshot to client
+		if persistable, ok := state.(Persistable); ok {
+			if snapshot, err := persistable.Serialize(); err == nil {
+				// Send special system message to client with state snapshot
+				stateMsg := map[string]interface{}{
+					"type": "STATE_SNAPSHOT",
+					"data": string(snapshot),
+				}
+				if jsonMsg, err := json.Marshal(stateMsg); err == nil {
+					s.Write(jsonMsg)
+				}
+			}
+		}
 	}
 
 	// If there is a next message, we process it

@@ -3,14 +3,57 @@ import morphdom from "morphdom";
 // Constants
 const SOCKET_MESSAGE = "Sent Message:";
 
+// Helpers for state persistence
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+function storeState(sessionId, stateData) {
+  try {
+    localStorage.setItem(`gotea_state_${sessionId}`, stateData);
+  } catch (e) {
+    console.warn('Failed to store state:', e);
+  }
+}
+
+function getStoredState(sessionId) {
+  try {
+    return localStorage.getItem(`gotea_state_${sessionId}`) || null;
+  } catch (e) {
+    console.warn('Failed to retrieve state:', e);
+    return null;
+  }
+}
+
 // Websockets
 console.log("Attempting to establish WebSocket connection");
+const sessionId = getCookie('session_id');
+const storedState = getStoredState(sessionId);
+const restoredStateParam = storedState ?
+  `&restored_state=${encodeURIComponent(storedState)}` : '';
+
 const socket = new WebSocket(
-  `${window.location.protocol === "https:" ? "wss://" : "ws://"}${window.location.host}/server?whence=${document.location.pathname}`
+  `${window.location.protocol === "https:" ? "wss://" : "ws://"}${window.location.host}/server?whence=${document.location.pathname}${restoredStateParam}`
 );
 
 // Handle incoming messages from the server
 socket.onmessage = event => {
+  const data = event.data;
+
+  // Try to parse as JSON to check for system messages
+  try {
+    const msg = JSON.parse(data);
+    if (msg.type === 'STATE_SNAPSHOT') {
+      const sessionId = getCookie('session_id');
+      storeState(sessionId, msg.data);
+      return; // Don't render system messages
+    }
+  } catch (e) {
+    // Not JSON, treat as HTML
+  }
+
   console.log("Received rerender from server");
   morphdom(document.documentElement, event.data, {
     childrenOnly: true

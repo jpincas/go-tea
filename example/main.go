@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/url"
@@ -26,6 +27,53 @@ type Model struct {
 	Animation    Animation
 	Counter      int
 	Chat         Chat
+}
+
+func (m *Model) Serialize() ([]byte, error) {
+	// Create a serializable version of state
+	snapshot := struct {
+		Counter    int `json:"counter"`
+		RouteData  int `json:"route_data"`
+		MemoryGame struct {
+			Score      int        `json:"score"`
+			TurnsTaken int        `json:"turns_taken"`
+			Difficulty Difficulty `json:"difficulty"`
+		} `json:"memory_game"`
+	}{
+		Counter:   m.Counter,
+		RouteData: m.RouteData,
+	}
+
+	snapshot.MemoryGame.Score = m.MemoryGame.Score
+	snapshot.MemoryGame.TurnsTaken = m.MemoryGame.TurnsTaken
+	snapshot.MemoryGame.Difficulty = m.MemoryGame.Difficulty
+
+	return json.Marshal(snapshot)
+}
+
+func (m *Model) Deserialize(data []byte) error {
+	var snapshot struct {
+		Counter    int `json:"counter"`
+		RouteData  int `json:"route_data"`
+		MemoryGame struct {
+			Score      int        `json:"score"`
+			TurnsTaken int        `json:"turns_taken"`
+			Difficulty Difficulty `json:"difficulty"`
+		} `json:"memory_game"`
+	}
+
+	if err := json.Unmarshal(data, &snapshot); err != nil {
+		return err
+	}
+
+	// Restore state
+	m.Counter = snapshot.Counter
+	m.RouteData = snapshot.RouteData
+	m.MemoryGame.Score = snapshot.MemoryGame.Score
+	m.MemoryGame.TurnsTaken = snapshot.MemoryGame.TurnsTaken
+	m.MemoryGame.Difficulty = snapshot.MemoryGame.Difficulty
+
+	return nil
 }
 
 func model(s gt.State) *Model {
