@@ -419,6 +419,7 @@ type Application struct {
 // - and attach the connection and message handlers
 func NewApp(model State) *Application {
 	melody := melody.New()
+	melody.Upgrader.EnableCompression = true
 	melody.HandleConnect(onConnect(model))
 	melody.HandleMessage(handleMessage)
 
