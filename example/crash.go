@@ -15,12 +15,13 @@ func CrashMe(_ gt.Message, s gt.State) gt.Response {
 }
 
 func renderCrash() h.Element {
-	return h.Div(
-		a.Attrs(a.Id("crash")),
-		h.P(a.Attrs(), h.Text("In order to stop errors in client-app code killing the Gotea runtime, crash protection is included!")),
-		h.Button(
-			a.Attrs(a.Class("crash-button"), a.OnClick(gt.SendBasicMessageNoArgs("CRASH_ME"))),
-			h.Text("Crash!"),
+	return h.Button(
+		a.Attrs(
+			a.Id("crash"),
+			a.Class("inline-flex items-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg border-2 border-stone-900 shadow-brutal-sm hover:shadow-brutal hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all"),
+			a.OnClick(gt.SendBasicMessageNoArgs("CRASH_ME")),
 		),
+		h.Span(a.Attrs(), h.Text("💥")),
+		h.Text("Trigger Panic"),
 	)
 }

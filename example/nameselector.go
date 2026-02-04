@@ -45,34 +45,49 @@ func nameSelectorSearchInputUpdate(m gt.Message, s gt.State) gt.Response {
 func renderComponents(nameSelector, tagSelector tagselector.Model) h.Element {
 	return h.Div(
 		a.Attrs(a.Class("space-y-8")),
+		// Header
+		h.Div(
+			a.Attrs(a.Class("text-center space-y-2")),
+			h.H1(a.Attrs(a.Class("text-4xl font-bold text-stone-900"), a.Custom("style", "font-family: 'DM Serif Display', serif;")), h.Text("🧩 Reusable Components")),
+			h.P(a.Attrs(a.Class("text-stone-600")), h.Text("Two instantiations of the same 'TagSelector' component, each with their own state.")),
+		),
+
+		// Components grid
+		h.Div(
+			a.Attrs(a.Class("grid grid-cols-1 md:grid-cols-2 gap-6")),
+			// Name selector
+			h.Div(
+				a.Attrs(a.Class("space-y-3")),
+				h.Div(
+					a.Attrs(a.Class("flex items-center gap-2")),
+					h.Span(a.Attrs(a.Class("text-2xl")), h.Text("👤")),
+					h.H3(a.Attrs(a.Class("text-lg font-bold text-stone-900")), h.Text("Select a Name")),
+				),
+				nameSelector.Render(),
+			),
+			// Team selector
+			h.Div(
+				a.Attrs(a.Class("space-y-3")),
+				h.Div(
+					a.Attrs(a.Class("flex items-center gap-2")),
+					h.Span(a.Attrs(a.Class("text-2xl")), h.Text("⚽")),
+					h.H3(a.Attrs(a.Class("text-lg font-bold text-stone-900")), h.Text("Select a Team")),
+				),
+				tagSelector.Render(),
+			),
+		),
+
+		// Explanatory note
 		renderExplanatoryNote(
 			"Reusable Components",
 			`
-			<p class="mb-2">This example demonstrates how to create reusable components in GoTea.</p>
-			<ul class="list-disc pl-5 space-y-1">
-				<li><strong>Component Model:</strong> The <code>TagSelector</code> is a struct that holds its own state.</li>
-				<li><strong>Instantiation:</strong> We create two instances of the <code>TagSelector</code> in the main <code>Model</code>, each with different configuration.</li>
-				<li><strong>Message Routing:</strong> Messages are routed to the correct component instance (though in this simple example, we just have separate message handlers).</li>
+			<p class="mb-3">This example demonstrates how to create reusable components in GoTea.</p>
+			<ul class="list-disc pl-5 space-y-2">
+				<li><strong class="text-stone-900">Component Model:</strong> The <code class="bg-stone-200 px-1.5 py-0.5 rounded text-xs font-mono">TagSelector</code> is a struct that holds its own state.</li>
+				<li><strong class="text-stone-900">Instantiation:</strong> We create two instances with different configuration in the main Model.</li>
+				<li><strong class="text-stone-900">Message Namespacing:</strong> Each component uses <code class="bg-stone-200 px-1.5 py-0.5 rounded text-xs font-mono">UniqueMsg()</code> and <code class="bg-stone-200 px-1.5 py-0.5 rounded text-xs font-mono">UniqueID()</code> to prevent collisions.</li>
 			</ul>
 			`,
-		),
-		h.Div(
-			a.Attrs(a.Class("text-center")),
-			h.H2(a.Attrs(a.Class("text-2xl font-bold text-gray-900")), h.Text("Components Demo")),
-			h.P(a.Attrs(a.Class("mt-2 text-gray-600")), h.Text("Two instantiations of the 'tag selector' component, running side-by-side")),
-		),
-		h.Div(
-			a.Attrs(a.Class("grid grid-cols-1 md:grid-cols-2 gap-8")),
-			h.Div(
-				a.Attrs(a.Class("space-y-4")),
-				h.H3(a.Attrs(a.Class("text-lg font-medium text-gray-900")), h.Text("Select a Name")),
-				nameSelector.Render(),
-			),
-			h.Div(
-				a.Attrs(a.Class("space-y-4")),
-				h.H3(a.Attrs(a.Class("text-lg font-medium text-gray-900")), h.Text("Select a Team")),
-				tagSelector.Render(),
-			),
 		),
 	)
 }

@@ -71,51 +71,66 @@ func (selector Model) Render() h.Element {
 	searchInputID := selector.UniqueID("search-input")
 
 	return h.Div(
-		a.Attrs(a.Class("bg-white p-6 rounded-lg shadow-md space-y-6")),
+		a.Attrs(a.Class("bg-white p-5 rounded-xl border-2 border-stone-900 shadow-brutal-sm space-y-4")),
+		// Search input
 		h.Div(
-			a.Attrs(a.Class("space-y-4")),
+			a.Attrs(a.Class("space-y-3")),
 			h.Input(
 				a.Attrs(
 					a.Id(searchInputID),
-					a.Class("w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"),
+					a.Class("w-full px-4 py-2.5 rounded-lg text-stone-900 placeholder-stone-400"),
 					a.Type("text"),
-					a.Placeholder("Start typing to see tags"),
+					a.Placeholder("Start typing to search..."),
 					a.Value(selector.SearchInput),
 					a.OnKeyUp(gt.SendBasicMessageWithValueFromInput(msgUpdateSearchInput, searchInputID)),
 				),
 			),
+			// Suggestions list
 			h.Ul(
-				a.Attrs(a.Class("space-y-2 max-h-40 overflow-y-auto")),
+				a.Attrs(a.Class("space-y-1 max-h-32 overflow-y-auto")),
 				func() []h.Element {
 					var elements []h.Element
 					for _, tag := range selector.SuggestedTags {
 						elements = append(elements, h.Li(
-							a.Attrs(a.Class("px-4 py-2 bg-gray-50 hover:bg-indigo-50 rounded-md cursor-pointer transition-colors duration-150"), a.OnClick(gt.SendBasicMessage(msgSelectTag, tag))),
+							a.Attrs(
+								a.Class("px-4 py-2 bg-stone-50 hover:bg-emerald-100 rounded-lg cursor-pointer transition-colors font-medium text-stone-700 hover:text-emerald-800 border border-transparent hover:border-emerald-300"),
+								a.OnClick(gt.SendBasicMessage(msgSelectTag, tag)),
+							),
 							h.Text(tag),
 						))
 					}
 					return elements
 				}()...,
 			),
+			// No match message
 			func() h.Element {
 				if selector.ShowNoMatchMessage() {
-					return h.P(a.Attrs(a.Class("text-sm text-red-500")), h.Text(selector.NoMatchMessage))
+					return h.P(a.Attrs(a.Class("text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg")), h.Text(selector.NoMatchMessage))
 				}
 				return h.Nothing(a.Attrs())
 			}(),
 		),
+		// Selected tags
 		h.Div(
-			a.Attrs(a.Class("border-t border-gray-200 pt-4")),
-			h.H4(a.Attrs(a.Class("text-sm font-medium text-gray-500 mb-3")), h.Text("Selected Tags:")),
+			a.Attrs(a.Class("border-t-2 border-dashed border-stone-200 pt-4")),
+			h.H4(a.Attrs(a.Class("text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3")), h.Text("Selected:")),
 			h.Ul(
 				a.Attrs(a.Class("flex flex-wrap gap-2")),
 				func() []h.Element {
+					if len(selector.SelectedTags) == 0 {
+						return []h.Element{
+							h.Li(a.Attrs(a.Class("text-sm text-stone-400 italic")), h.Text("None selected")),
+						}
+					}
 					var elements []h.Element
 					for _, tag := range selector.SelectedTags {
 						elements = append(elements, h.Li(
-							a.Attrs(a.Class("inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 cursor-pointer hover:bg-indigo-200 transition-colors duration-150"), a.OnClick(gt.SendBasicMessage(msgRemoveTag, tag))),
+							a.Attrs(
+								a.Class("inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-800 border-2 border-emerald-300 cursor-pointer hover:bg-rose-100 hover:text-rose-800 hover:border-rose-300 transition-colors"),
+								a.OnClick(gt.SendBasicMessage(msgRemoveTag, tag)),
+							),
 							h.Text(tag),
-							h.Span(a.Attrs(a.Class("ml-2 text-indigo-500 hover:text-indigo-700")), h.Text("×")),
+							h.Span(a.Attrs(a.Class("text-xs opacity-60")), h.Text("✕")),
 						))
 					}
 					return elements

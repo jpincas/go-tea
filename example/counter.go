@@ -22,18 +22,24 @@ func IncrementCounter(m gotea.Message, s gt.State) gt.Response {
 
 func renderCounter(counter int) h.Element {
 	return h.Div(
-		a.Attrs(a.Id("counter"), a.Class("flex items-center space-x-4 p-4 bg-gray-50 rounded-lg shadow-sm w-fit")),
+		a.Attrs(a.Id("counter"), a.Class("flex items-center gap-3")),
 		h.Button(
-			a.Attrs(a.Class("bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150 ease-in-out"), a.OnClick(gt.SendBasicMessage("INCREMENT_COUNTER", -1))),
-			h.Text("Down"),
+			a.Attrs(
+				a.Class("w-12 h-12 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xl rounded-xl border-2 border-stone-900 shadow-brutal-sm hover:shadow-brutal hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all"),
+				a.OnClick(gt.SendBasicMessage("INCREMENT_COUNTER", -1)),
+			),
+			h.Text("−"),
 		),
 		h.Div(
-			a.Attrs(a.Class("text-2xl font-mono font-bold text-gray-800 w-12 text-center")),
-			h.Text(fmt.Sprintf("%d", counter)),
+			a.Attrs(a.Class("w-20 h-12 flex items-center justify-center bg-white border-2 border-stone-900 rounded-xl shadow-brutal-sm"), a.Custom("style", "font-family: 'JetBrains Mono', monospace;")),
+			h.Span(a.Attrs(a.Class("text-2xl font-bold text-stone-900")), h.Text(fmt.Sprintf("%d", counter))),
 		),
 		h.Button(
-			a.Attrs(a.Class("bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150 ease-in-out"), a.OnClick(gt.SendBasicMessage("INCREMENT_COUNTER", 1))),
-			h.Text("Up"),
+			a.Attrs(
+				a.Class("w-12 h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xl rounded-xl border-2 border-stone-900 shadow-brutal-sm hover:shadow-brutal hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all"),
+				a.OnClick(gt.SendBasicMessage("INCREMENT_COUNTER", 1)),
+			),
+			h.Text("+"),
 		),
 	)
 }

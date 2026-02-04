@@ -7,7 +7,6 @@ import (
 	gotea "github.com/jpincas/go-tea"
 	gt "github.com/jpincas/go-tea"
 	a "github.com/jpincas/htmlfunc/attributes"
-	"github.com/jpincas/htmlfunc/css"
 	h "github.com/jpincas/htmlfunc/html"
 )
 
@@ -104,56 +103,83 @@ func translate(co, backgroundSize, ballSize int) int {
 
 func (animation Animation) render() h.Element {
 	return h.Div(
-		a.Attrs(a.Class("space-y-6")),
-		renderExplanatoryNote(
-			"Server-Side Animation",
-			`
-			<p class="mb-2">This demonstrates a continuous animation loop driven by the server.</p>
-			<ul class="list-disc pl-5 space-y-1">
-				<li><strong>Game Loop:</strong> The server sends a <code>TICK</code> message to itself repeatedly using <code>RespondWithDelayedNextMsg</code>.</li>
-				<li><strong>State Update:</strong> On each tick, the ball's position is updated in the state.</li>
-				<li><strong>Rendering:</strong> The new state is rendered and sent to the client. GoTea's virtual DOM diffing ensures only the changed attributes (style) are updated in the DOM, resulting in smooth animation.</li>
-			</ul>
-			`,
-		),
-		h.H2(a.Attrs(a.Class("text-2xl font-bold text-gray-900")), h.Text("A Server-Driven Animation")),
-		h.P(a.Attrs(a.Class("text-gray-600")), h.Text("A 30fps bouncing ball animation being driven entirely by the server. You'd probably never want to do this, but is fun to know that you can! Clicking 'start' fires off a never-ending sequence of messages with a 33ms delay between each. Each message sets the x and y coordinates of the ball and the scene is rerendered by the Gotea runtime.")),
-		
+		a.Attrs(a.Class("space-y-8")),
+		// Header
 		h.Div(
-			a.Attrs(a.Class("flex space-x-4")),
+			a.Attrs(a.Class("text-center space-y-2")),
+			h.H1(a.Attrs(a.Class("text-4xl font-bold text-stone-900"), a.Custom("style", "font-family: 'DM Serif Display', serif;")), h.Text("🏀 Server-Driven Animation")),
+			h.P(a.Attrs(a.Class("text-stone-600 max-w-2xl mx-auto")), h.Text("A 30fps bouncing ball animation driven entirely by the server. Each frame is a WebSocket message that updates the state and re-renders.")),
+		),
+
+		// Controls
+		h.Div(
+			a.Attrs(a.Class("flex flex-wrap justify-center gap-3")),
 			h.Button(
-				a.Attrs(a.Class("inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"), a.OnClick(gt.SendBasicMessageNoArgs("START_ANIMATION"))),
-				h.Text("Start Animation"),
+				a.Attrs(
+					a.Class("inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl border-2 border-stone-900 shadow-brutal-sm hover:shadow-brutal hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all"),
+					a.OnClick(gt.SendBasicMessageNoArgs("START_ANIMATION")),
+				),
+				h.Span(a.Attrs(), h.Text("▶")),
+				h.Text("Start"),
 			),
 			h.Button(
-				a.Attrs(a.Class("inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"), a.OnClick(gt.SendBasicMessageNoArgs("STOP_ANIMATION"))),
-				h.Text("Stop Animation"),
+				a.Attrs(
+					a.Class("inline-flex items-center gap-2 px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-semibold rounded-xl border-2 border-stone-900 shadow-brutal-sm hover:shadow-brutal hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all"),
+					a.OnClick(gt.SendBasicMessageNoArgs("STOP_ANIMATION")),
+				),
+				h.Span(a.Attrs(), h.Text("⏸")),
+				h.Text("Stop"),
 			),
 			h.Button(
-				a.Attrs(a.Class("inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"), a.OnClick(gt.SendBasicMessageNoArgs("RESET_ANIMATION"))),
-				h.Text("Reset Animation"),
+				a.Attrs(
+					a.Class("inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-stone-50 text-stone-700 font-semibold rounded-xl border-2 border-stone-900 shadow-brutal-sm hover:shadow-brutal hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all"),
+					a.OnClick(gt.SendBasicMessageNoArgs("RESET_ANIMATION")),
+				),
+				h.Span(a.Attrs(), h.Text("↺")),
+				h.Text("Reset"),
 			),
 		),
 
-		h.P(a.Attrs(a.Class("font-mono text-sm text-gray-500")), h.Text(fmt.Sprintf("Coordinates: (%d, %d)", animation.X, animation.Y))),
-		
+		// Coordinates display
 		h.Div(
-			a.Attrs(
-				a.Id("animation-background"), 
-				a.Class("relative bg-gray-200 rounded-lg border border-gray-300 overflow-hidden"),
-				a.Style(css.Width(fmt.Sprintf("%dpx", animationBackgroundSize)), css.Height(fmt.Sprintf("%dpx", animationBackgroundSize))),
+			a.Attrs(a.Class("text-center")),
+			h.Span(
+				a.Attrs(a.Class("inline-block px-4 py-2 bg-stone-100 rounded-lg border-2 border-stone-300 text-sm"), a.Custom("style", "font-family: 'JetBrains Mono', monospace;")),
+				h.Text(fmt.Sprintf("x: %d, y: %d", animation.X, animation.Y)),
 			),
+		),
+
+		// Animation canvas
+		h.Div(
+			a.Attrs(a.Class("flex justify-center")),
 			h.Div(
 				a.Attrs(
-					a.Id("animation-ball"), 
-					a.Class("absolute bg-indigo-600 rounded-full shadow-lg"),
-					a.Style(
-						css.Width(fmt.Sprintf("%dpx", animationBallSize)), 
-						css.Height(fmt.Sprintf("%dpx", animationBallSize)),
-						css.Transform(fmt.Sprintf("translate(%dpx, %dpx)", animation.TranslateX, animation.TranslateY)),
+					a.Id("animation-background"),
+					a.Class("relative rounded-2xl border-2 border-stone-900 shadow-brutal overflow-hidden"),
+					a.Custom("style", fmt.Sprintf("width: %dpx; height: %dpx; background: linear-gradient(135deg, #fef3c7 0%%, #fde68a 50%%, #fcd34d 100%%);", animationBackgroundSize, animationBackgroundSize)),
+				),
+				// Ball
+				h.Div(
+					a.Attrs(
+						a.Id("animation-ball"),
+						a.Class("absolute rounded-full border-2 border-stone-900"),
+						a.Custom("style", fmt.Sprintf("width: %dpx; height: %dpx; transform: translate(%dpx, %dpx); background: linear-gradient(135deg, #f97316 0%%, #ea580c 100%%); box-shadow: inset -4px -4px 0px rgba(0,0,0,0.2);", animationBallSize, animationBallSize, animation.TranslateX, animation.TranslateY)),
 					),
 				),
 			),
+		),
+
+		// Explanatory note
+		renderExplanatoryNote(
+			"Server-Side Animation",
+			`
+			<p class="mb-3">This demonstrates a continuous animation loop driven by the server.</p>
+			<ul class="list-disc pl-5 space-y-2">
+				<li><strong class="text-stone-900">Game Loop:</strong> The server sends a <code class="bg-stone-200 px-1.5 py-0.5 rounded text-xs font-mono">NEXT_ANIMATION_FRAME</code> message to itself repeatedly using <code class="bg-stone-200 px-1.5 py-0.5 rounded text-xs font-mono">RespondWithDelayedNextMsg</code>.</li>
+				<li><strong class="text-stone-900">State Update:</strong> On each tick, the ball's position is updated in the state.</li>
+				<li><strong class="text-stone-900">Rendering:</strong> The new state is rendered and sent to the client. Morphdom ensures only the changed attributes (style) are updated.</li>
+			</ul>
+			`,
 		),
 	)
 }

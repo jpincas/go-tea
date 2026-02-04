@@ -62,58 +62,74 @@ func SendMessage(m gt.Message, s gt.State) gt.Response {
 func (chat Chat) render() h.Element {
 	return h.Div(
 		a.Attrs(a.Class("space-y-6")),
-		renderExplanatoryNote(
-			"Real-time Chat",
-			`
-			<p class="mb-2">A simple chat application demonstrating shared state and broadcasting.</p>
-			<ul class="list-disc pl-5 space-y-1">
-				<li><strong>Shared State:</strong> The list of messages is a global variable shared across all sessions.</li>
-				<li><strong>Broadcasting:</strong> When a new message is received, the server updates the shared state and calls <code>app.Broadcast()</code> to re-render all connected clients.</li>
-				<li><strong>Session State:</strong> The username is stored in the session-specific state.</li>
-			</ul>
-			`,
-		),
-		h.H2(a.Attrs(a.Class("text-2xl font-bold text-gray-900")), h.Text("Chat Room")),
-		
+		// Header
 		h.Div(
-			a.Attrs(a.Class("bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-4")),
+			a.Attrs(a.Class("text-center space-y-2")),
+			h.H1(a.Attrs(a.Class("text-4xl font-bold text-stone-900"), a.Custom("style", "font-family: 'DM Serif Display', serif;")), h.Text("💬 Chat Room")),
+			h.P(a.Attrs(a.Class("text-stone-600")), h.Text("Real-time chat with broadcasting — messages sync instantly across all connected clients!")),
+		),
+
+		// Username setup
+		h.Div(
+			a.Attrs(a.Class("bg-gradient-to-r from-violet-50 to-purple-50 p-5 rounded-xl border-2 border-stone-900 shadow-brutal-sm")),
 			h.Div(
-				a.Attrs(a.Class("flex items-end space-x-2")),
+				a.Attrs(a.Class("flex flex-col sm:flex-row items-stretch sm:items-end gap-3")),
 				h.Div(
 					a.Attrs(a.Class("flex-grow")),
-					h.Label(a.Attrs(a.For("usernameInput"), a.Class("block text-sm font-medium text-gray-700 mb-1")), h.Text("Enter your username:")),
-					h.Input(a.Attrs(a.Type("text"), a.Id("usernameInput"), a.Value(chat.Username), a.Class("block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"))),
+					h.Label(a.Attrs(a.For("usernameInput"), a.Class("block text-sm font-semibold text-stone-700 mb-1")), h.Text("Your Display Name")),
+					h.Input(a.Attrs(
+						a.Type("text"),
+						a.Id("usernameInput"),
+						a.Value(chat.Username),
+						a.Placeholder("Enter a username.."),
+						a.Class("block w-full rounded-lg px-4 py-2.5 text-stone-900"),
+					)),
 				),
 				h.Button(
-					a.Attrs(a.OnClick(gt.SendBasicMessageWithValueFromInput("SET_USERNAME", "usernameInput")), a.Class("inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500")),
-					h.Text("Set Username"),
+					a.Attrs(
+						a.OnClick(gt.SendBasicMessageWithValueFromInput("SET_USERNAME", "usernameInput")),
+						a.Class("px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-semibold rounded-lg border-2 border-stone-900 shadow-brutal-sm hover:shadow-brutal hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all whitespace-nowrap"),
+					),
+					h.Text("Set Name"),
 				),
 			),
 		),
 
+		// Messages area
 		h.Div(
-			a.Attrs(a.Id("messages"), a.Class("bg-gray-50 p-4 rounded-lg border border-gray-200 h-96 overflow-y-auto space-y-4")),
+			a.Attrs(a.Id("messages"), a.Class("bg-stone-100 p-4 rounded-xl border-2 border-stone-300 h-80 overflow-y-auto space-y-3")),
 			func() []h.Element {
+				if len(*chat.Messages) == 0 {
+					return []h.Element{
+						h.Div(
+							a.Attrs(a.Class("flex items-center justify-center h-full text-stone-400")),
+							h.Text("No messages yet. Start the conversation! 👋"),
+						),
+					}
+				}
 				var elements []h.Element
 				for _, msg := range *chat.Messages {
+					isOwn := msg.User == chat.Username
 					containerClass := "flex justify-start"
-					bubbleClass := "bg-white text-gray-800 border border-gray-200"
-					
-					if msg.User == chat.Username {
+					bubbleClass := "bg-white border-stone-300"
+					textClass := "text-stone-800"
+
+					if isOwn {
 						containerClass = "flex justify-end"
-						bubbleClass = "bg-indigo-100 text-indigo-900 border border-indigo-200"
+						bubbleClass = "bg-emerald-100 border-emerald-400"
+						textClass = "text-emerald-900"
 					}
-					
+
 					elements = append(elements, h.Div(
 						a.Attrs(a.Class(containerClass)),
 						h.Div(
-							a.Attrs(a.Class(fmt.Sprintf("max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow-sm %s", bubbleClass))),
+							a.Attrs(a.Class(fmt.Sprintf("max-w-xs lg:max-w-md px-4 py-2.5 rounded-xl border-2 %s", bubbleClass))),
 							h.Div(
-								a.Attrs(a.Class("flex justify-between items-baseline mb-1 space-x-2")),
-								h.Span(a.Attrs(a.Class("font-bold text-xs")), h.Text(msg.User)),
-								h.Span(a.Attrs(a.Class("text-xs opacity-75")), h.Text(msg.TimeStamp.Format("15:04"))),
+								a.Attrs(a.Class("flex justify-between items-baseline mb-1 gap-3")),
+								h.Span(a.Attrs(a.Class(fmt.Sprintf("font-bold text-xs %s", textClass))), h.Text(msg.User)),
+								h.Span(a.Attrs(a.Class("text-xs text-stone-400"), a.Custom("style", "font-family: 'JetBrains Mono', monospace;")), h.Text(msg.TimeStamp.Format("15:04"))),
 							),
-							h.P(a.Attrs(a.Class("text-sm")), h.Text(msg.Text)),
+							h.P(a.Attrs(a.Class(fmt.Sprintf("text-sm %s", textClass))), h.Text(msg.Text)),
 						),
 					))
 				}
@@ -121,17 +137,48 @@ func (chat Chat) render() h.Element {
 			}()...,
 		),
 
+		// Message input
 		h.Div(
-			a.Attrs(a.Class("bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-4")),
-			h.P(a.Attrs(a.Class("text-sm text-gray-500 italic")), h.Text(fmt.Sprintf("Posting as %s", chat.Username))),
+			a.Attrs(a.Class("bg-white p-4 rounded-xl border-2 border-stone-900 shadow-brutal-sm")),
 			h.Div(
-				a.Attrs(a.Class("flex space-x-2")),
-				h.Input(a.Attrs(a.Type("text"), a.Id("messageInput"), a.Placeholder("Type your message..."), a.Class("block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"))),
+				a.Attrs(a.Class("flex items-center gap-2 mb-3")),
+				h.Span(a.Attrs(a.Class("text-sm text-stone-500")), h.Text("Posting as")),
+				h.Span(a.Attrs(a.Class("text-sm font-bold text-stone-900 bg-stone-100 px-2 py-0.5 rounded")), h.Text(func() string {
+					if chat.Username == "" {
+						return "Anonymous"
+					}
+					return chat.Username
+				}())),
+			),
+			h.Div(
+				a.Attrs(a.Class("flex gap-2")),
+				h.Input(a.Attrs(
+					a.Type("text"),
+					a.Id("messageInput"),
+					a.Placeholder("Type your message.."),
+					a.Class("flex-grow rounded-lg px-4 py-2.5 text-stone-900"),
+				)),
 				h.Button(
-					a.Attrs(a.OnClick(gt.SendBasicMessageWithValueFromInput("SEND_MESSAGE", "messageInput")), a.Class("inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500")),
-					h.Text("Send"),
+					a.Attrs(
+						a.OnClick(gt.SendBasicMessageWithValueFromInput("SEND_MESSAGE", "messageInput")),
+						a.Class("px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg border-2 border-stone-900 shadow-brutal-sm hover:shadow-brutal hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all"),
+					),
+					h.Text("Send →"),
 				),
 			),
+		),
+
+		// Explanatory note
+		renderExplanatoryNote(
+			"Real-time Chat",
+			`
+			<p class="mb-3">A simple chat application demonstrating shared state and broadcasting.</p>
+			<ul class="list-disc pl-5 space-y-2">
+				<li><strong class="text-stone-900">Shared State:</strong> The list of messages is a global variable shared across all sessions.</li>
+				<li><strong class="text-stone-900">Broadcasting:</strong> When a new message is received, the server calls <code class="bg-stone-200 px-1.5 py-0.5 rounded text-xs font-mono">app.Broadcast()</code> to re-render all connected clients.</li>
+				<li><strong class="text-stone-900">Session State:</strong> The username is stored in the session-specific state.</li>
+			</ul>
+			`,
 		),
 	)
 }

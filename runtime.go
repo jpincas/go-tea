@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,8 +14,16 @@ import (
 )
 
 const (
-	melodyStateKey = "state"
+	melodySessionDataKey = "sessionData"
 )
+
+// sessionData wraps the state with a mutex to prevent concurrent message processing
+// and caches the MessageMap to avoid rebuilding it on every message
+type sessionData struct {
+	state      State
+	mu         sync.Mutex
+	messageMap MessageMap // cached from state.Update()
+}
 
 // ROUTING
 
@@ -161,7 +170,13 @@ func onConnect(model State) func(s *melody.Session) {
 			}
 		}
 
-		s.Set(melodyStateKey, state)
+		// Wrap state with mutex for thread-safe message processing
+		// Cache the MessageMap once to avoid rebuilding on every message
+		sd := &sessionData{
+			state:      state,
+			messageMap: state.Update(),
+		}
+		s.Set(melodySessionDataKey, sd)
 	}
 }
 
@@ -174,12 +189,14 @@ func onConnect(model State) func(s *melody.Session) {
 // 2 - some optional accompanying data (JSON) (can be nil)
 // 3 - an optional identifier (a string) - useful for reusing the same message handler for multiple messages
 // 4 - an optional blockRerender flag (bool) - useful for messages that don't require a rerender
+// 5 - an optional componentID (a string) - automatically set when using component message helpers
 type Message struct {
 	Message string `json:"message"`
 
 	Arguments     any    `json:"args"`
 	Identifier    string `json:"identifier"`
 	BlockRerender bool   `json:"blockRerender"`
+	ComponentID   string `json:"componentId,omitempty"`
 }
 
 // Some helpers for decoding messages
@@ -216,6 +233,16 @@ func (m Message) ArgsToUint() uint {
 	// JSON alwayss marshalls numbers to float64
 	f, _ := m.Arguments.(float64)
 	return uint(f)
+}
+
+// GetComponentID returns the ComponentID that sent this message, or empty string if not set
+func (m Message) GetComponentID() ComponentID {
+	return ComponentID(m.ComponentID)
+}
+
+// FromComponent returns true if this message was sent from the specified component
+func (m Message) FromComponent(c ComponentID) bool {
+	return m.ComponentID == string(c)
 }
 
 // Response is returned by MessageHandler functions.  The most important part of the
@@ -288,17 +315,17 @@ func MergeMaps(msgMaps ...MessageMap) MessageMap {
 // handleMessage is the Melody handler that is called when a websocket message is received
 // In gotea, all it does is retrieve the state from the session, and then pass the message processor
 func handleMessage(s *melody.Session, msg []byte) {
-	st, _ := s.Get(melodyStateKey)
-	state := st.(State)
+	sdRaw, _ := s.Get(melodySessionDataKey)
+	sd := sdRaw.(*sessionData)
 
 	var message Message
 	if err := json.Unmarshal(msg, &message); err != nil {
-		s.Write(state.RenderError(err))
+		s.Write(sd.state.RenderError(err))
 		return
 	}
 
-	if err := message.process(s, state); err != nil {
-		s.Write(state.RenderError(err))
+	if err := message.process(s, sd); err != nil {
+		s.Write(sd.state.RenderError(err))
 		return
 	}
 }
@@ -307,13 +334,19 @@ func handleMessage(s *melody.Session, msg []byte) {
 // It checks to make sure a message handling function is assigned to that message, raising an error if not.
 // Assuming a message handling function is found, it is executed and the new state is rendered
 // Any further messages are sent for processing in the same way (recursively).
-func (message Message) process(s *melody.Session, state State) error {
+func (message Message) process(s *melody.Session, sd *sessionData) error {
 	// Since messages can trigger themselves, they can potentially set off an infinite loop,
 	// which would not be interrupted by the connection closing.
 	// So here we check that the connection is open before processing the message.
 	if s.IsClosed() {
 		return fmt.Errorf("Could not process message %s: connection has been closed", message.Message)
 	}
+
+	// Lock the session mutex to prevent concurrent state mutation
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+
+	state := sd.state
 
 	// Try system messages first.
 	// At the moment, just the router, but could expand
@@ -323,8 +356,8 @@ func (message Message) process(s *melody.Session, state State) error {
 	// TODO: We might want to check both maps here and raise
 	// some sort of log message if there is a clash of names
 	if !found {
-		// Care to overwrite the funcToExecute variable above
-		funcToExecute, found = state.Update()[message.Message]
+		// Use the cached MessageMap instead of calling state.Update() each time
+		funcToExecute, found = sd.messageMap[message.Message]
 		if !found {
 			return fmt.Errorf("Could not process message %s: message does not exist", message.Message)
 		}
@@ -357,13 +390,14 @@ func (message Message) process(s *melody.Session, state State) error {
 
 	// If there is a next message, we process it
 	// Note: this must happen in a go routine to unblock this session from receiving further messages
+	// The goroutine will acquire the lock when it's ready to process
 	if response.NextMsg != nil {
 		go func() {
 			if response.Delay > 0 {
 				time.Sleep(response.Delay)
 			}
 
-			response.NextMsg.process(s, state)
+			response.NextMsg.process(s, sd)
 		}()
 	}
 
@@ -435,11 +469,14 @@ func (app *Application) Start(port int, staticDirectory string) {
 }
 
 // Broadcast rerenders all sessions
+// Note: We don't acquire locks here because Broadcast is typically called from
+// within a message handler that already holds the lock for the current session.
+// The brief window of potential inconsistency during render is acceptable.
 func (app *Application) Broadcast() {
 	sessions, _ := app.Melody.Sessions()
 	for _, s := range sessions {
-		st, _ := s.Get("state")
-		state := st.(State)
-		s.Write(state.Render())
+		sdRaw, _ := s.Get(melodySessionDataKey)
+		sd := sdRaw.(*sessionData)
+		s.Write(sd.state.Render())
 	}
 }

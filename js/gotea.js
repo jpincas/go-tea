@@ -2,6 +2,9 @@ import morphdom from "morphdom";
 
 // Constants
 const SOCKET_MESSAGE = "Sent Message:";
+const INITIAL_RECONNECT_DELAY = 1000;  // 1 second
+const MAX_RECONNECT_DELAY = 30000;     // 30 seconds
+const RECONNECT_BACKOFF_MULTIPLIER = 2;
 
 // Helpers for state persistence
 function getCookie(name) {
@@ -27,63 +30,107 @@ function getStoredState(sessionId) {
   }
 }
 
-// Websockets
-console.log("Attempting to establish WebSocket connection");
-const sessionId = getCookie('session_id');
-const storedState = getStoredState(sessionId);
-const restoredStateParam = storedState ?
-  `&restored_state=${encodeURIComponent(storedState)}` : '';
+// WebSocket connection management
+let socket = null;
+let reconnectDelay = INITIAL_RECONNECT_DELAY;
+let reconnectTimeout = null;
+let intentionalClose = false;
 
-const socket = new WebSocket(
-  `${window.location.protocol === "https:" ? "wss://" : "ws://"}${window.location.host}/server?whence=${document.location.pathname}${restoredStateParam}`
-);
+function buildWebSocketUrl() {
+  const sessionId = getCookie('session_id');
+  const storedState = getStoredState(sessionId);
+  const restoredStateParam = storedState ?
+    `&restored_state=${encodeURIComponent(storedState)}` : '';
 
-// Handle incoming messages from the server
-socket.onmessage = event => {
-  const data = event.data;
+  return `${window.location.protocol === "https:" ? "wss://" : "ws://"}${window.location.host}/server?whence=${document.location.pathname}${restoredStateParam}`;
+}
 
-  // Try to parse as JSON to check for system messages
-  try {
-    const msg = JSON.parse(data);
-    if (msg.type === 'STATE_SNAPSHOT') {
-      const sessionId = getCookie('session_id');
-      storeState(sessionId, msg.data);
-      return; // Don't render system messages
+function connect() {
+  console.log("Attempting to establish WebSocket connection");
+
+  socket = new WebSocket(buildWebSocketUrl());
+
+  socket.onmessage = event => {
+    const data = event.data;
+
+    // Try to parse as JSON to check for system messages
+    try {
+      const msg = JSON.parse(data);
+      if (msg.type === 'STATE_SNAPSHOT') {
+        const sessionId = getCookie('session_id');
+        storeState(sessionId, msg.data);
+        return; // Don't render system messages
+      }
+    } catch (e) {
+      // Not JSON, treat as HTML
     }
-  } catch (e) {
-    // Not JSON, treat as HTML
+
+    console.log("Received rerender from server");
+    morphdom(document.documentElement, event.data, {
+      childrenOnly: true
+    });
+  };
+
+  socket.onopen = () => {
+    console.log("WebSocket connection established.");
+    // Reset reconnect delay on successful connection
+    reconnectDelay = INITIAL_RECONNECT_DELAY;
+  };
+
+  socket.onerror = error => {
+    console.error("WebSocket error:", error);
+  };
+
+  socket.onclose = event => {
+    if (event.wasClean) {
+      console.log(`WebSocket connection closed cleanly, code=${event.code}, reason=${event.reason}`);
+    } else {
+      console.error("WebSocket connection closed unexpectedly, code=", event.code, "reason=", event.reason);
+    }
+
+    // Attempt reconnection unless intentionally closed
+    if (!intentionalClose) {
+      scheduleReconnect();
+    }
+  };
+}
+
+function scheduleReconnect() {
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
   }
 
-  console.log("Received rerender from server");
-  morphdom(document.documentElement, event.data, {
-    childrenOnly: true
-  });
-};
+  console.log(`Scheduling reconnection in ${reconnectDelay}ms...`);
 
-// Handle WebSocket open event
-socket.onopen = () => {
-  console.log("WebSocket connection established.");
-};
+  reconnectTimeout = setTimeout(() => {
+    console.log("Attempting to reconnect...");
+    connect();
 
-// Handle WebSocket error event
-socket.onerror = error => {
-  console.error("WebSocket error:", error);
-};
+    // Increase delay for next attempt (exponential backoff)
+    reconnectDelay = Math.min(reconnectDelay * RECONNECT_BACKOFF_MULTIPLIER, MAX_RECONNECT_DELAY);
+  }, reconnectDelay);
+}
 
-// Handle WebSocket close event
-socket.onclose = event => {
-  if (event.wasClean) {
-    console.log(`WebSocket connection closed cleanly, code=${event.code}, reason=${event.reason}`);
+// Initial connection
+connect();
+
+// Helper to safely send through websocket
+function safeSend(data) {
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(data);
+    return true;
   } else {
-    console.error("WebSocket connection closed unexpectedly, code=", event.code, "reason=", event.reason);
+    console.warn("WebSocket not connected. Message queued for reconnection.");
+    // Could implement message queuing here if needed
+    return false;
   }
-};
+}
 
 // Send a message through the websocket
 const sendMessage = (msg) => {
   const msgJsonString = JSON.stringify(msg);
   console.log(`${SOCKET_MESSAGE}`, msgJsonString);
-  socket.send(msgJsonString);
+  safeSend(msgJsonString);
 };
 
 // Send a message with a value from an input field
@@ -92,7 +139,7 @@ const sendMessageWithValueFromInput = (msg, inputID) => {
 
   const msgJsonString = JSON.stringify(msg);
   console.log(`${SOCKET_MESSAGE}`, msgJsonString);
-  socket.send(msgJsonString);
+  safeSend(msgJsonString);
 };
 
 const sendMessageWithValueFromThisInput = (msg) => {
@@ -100,7 +147,7 @@ const sendMessageWithValueFromThisInput = (msg) => {
 
   const msgJsonString = JSON.stringify(msg);
   console.log(`${SOCKET_MESSAGE}`, msgJsonString);
-  socket.send(msgJsonString);
+  safeSend(msgJsonString);
 };
 
 // Submit a form through the websocket
@@ -108,7 +155,7 @@ const updateFormState = (msg, formID) => {
   msg.args = serializeForm(formID);
 
   console.log(`${SOCKET_MESSAGE}`, msg);
-  socket.send(JSON.stringify(msg));
+  safeSend(JSON.stringify(msg));
 };
 
 
@@ -162,7 +209,7 @@ const changeRoute = route => {
     args: route
   };
   console.log(`${SOCKET_MESSAGE}`, msg);
-  socket.send(JSON.stringify(msg));
+  safeSend(JSON.stringify(msg));
 };
 
 // Expose functions to the global window object
@@ -180,7 +227,7 @@ window.addEventListener('popstate', event => {
     args: document.location.pathname,
   };
   console.log(`${SOCKET_MESSAGE}`, msg);
-  socket.send(JSON.stringify(msg));
+  safeSend(JSON.stringify(msg));
 });
 
 // Intercept link clicks and handle routing
