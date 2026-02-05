@@ -1,9 +1,8 @@
 .DS_Store
 
 js/.cache
-js/node_modules
 
-/example/node_modules
+node_modules
 /example/.cache
 /example/dist
 /example/gotea-example
