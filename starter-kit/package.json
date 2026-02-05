@@ -1,0 +1,14 @@
+{
+  "name": "gotea-starter",
+  "scripts": {
+    "start": "parcel",
+    "build": "npm run clean && parcel build js/main.js --no-cache --dist-dir static",
+    "clean": "rm -rf static/*.js static/*.map"
+  },
+  "devDependencies": {
+    "parcel": "^2.16.1"
+  },
+  "dependencies": {
+    "gotea": "file:../js"
+  }
+}

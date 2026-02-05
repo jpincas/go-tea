@@ -1,0 +1,19 @@
+/* Custom styles - Tailwind is loaded via CDN */
+
+body {
+    min-height: 100vh;
+}
+
+/* Focus ring improvements */
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+}
+
+/* Smooth transitions */
+* {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}

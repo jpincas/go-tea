@@ -1,0 +1,350 @@
+# Gotea
+
+> Go library implementing The Elm Architecture (TEA) for server-side rendered single-page web applications with WebSocket communication and morphdom DOM patching.
+
+Gotea keeps all application state and logic on the server. The browser acts as a "dumb terminal" - it sends messages via WebSocket and receives HTML patches. State mutations happen server-side, and morphdom efficiently updates the DOM without full page reloads.
+
+**Import path:** `github.com/jpincas/go-tea`
+
+**Key packages:**
+- `gotea` (aliased as `gt`) - Core runtime, interfaces, message handling
+- `github.com/jpincas/go-tea/html` (aliased as `h`) - HTML element generation
+- `github.com/jpincas/go-tea/attributes` (aliased as `a`) - HTML attributes
+- `github.com/jpincas/go-tea/css` - CSS property helpers
+- `github.com/jpincas/go-tea/tester` - Testing utilities
+
+## Core Interfaces
+
+```go
+// State - every application must implement this
+type State interface {
+    Routable                    // Embed gt.Router in your struct
+    Init(uuid.UUID) State       // Initialize state for new session
+    Update() MessageMap         // Return message handlers
+    Render() []byte             // Render current state to HTML
+    RenderError(error) []byte   // Render error state
+}
+
+// Persistable - optional, enables state restoration across restarts
+type Persistable interface {
+    Serialize() ([]byte, error)
+    Deserialize([]byte) error
+}
+```
+
+## Minimal Working Example
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/google/uuid"
+    gt "github.com/jpincas/go-tea"
+    a "github.com/jpincas/go-tea/attributes"
+    h "github.com/jpincas/go-tea/html"
+)
+
+type Model struct {
+    gt.Router  // MUST embed for routing
+    Counter int
+}
+
+func (m *Model) Init(sid uuid.UUID) gt.State {
+    model := &Model{}
+    model.Register("/", func(s gt.State) []byte {
+        return renderCounter(s.(*Model).Counter).Bytes()
+    })
+    return model
+}
+
+func (m *Model) Update() gt.MessageMap {
+    return gt.MessageMap{
+        "INCREMENT": func(msg gt.Message, s gt.State) gt.Response {
+            s.(*Model).Counter += msg.ArgsToInt()
+            return gt.Respond()
+        },
+    }
+}
+
+func (m *Model) Render() []byte {
+    return m.RenderRoute(m)
+}
+
+func (m *Model) RenderError(err error) []byte {
+    return []byte(fmt.Sprintf("Error: %s", err))
+}
+
+func (m *Model) OnRouteChange(path string) {}
+
+func renderCounter(count int) h.Element {
+    return h.Div(a.Attrs(a.Class("counter")),
+        h.Button(a.Attrs(a.OnClick(gt.SendBasicMessage("INCREMENT", -1))), h.Text("-")),
+        h.Span(a.Attrs(), h.Text(fmt.Sprintf("%d", count))),
+        h.Button(a.Attrs(a.OnClick(gt.SendBasicMessage("INCREMENT", 1))), h.Text("+")),
+    )
+}
+
+func main() {
+    app := gt.NewApp(&Model{})
+    app.Start(8080, "static")
+}
+```
+
+## Message Handling
+
+```go
+// MessageHandler signature
+type MessageHandler func(Message, State) Response
+
+// MessageMap maps message names to handlers
+type MessageMap map[string]MessageHandler
+
+// Message sent from browser
+type Message struct {
+    Message       string // Message name (SCREAMING_SNAKE_CASE by convention)
+    Arguments     any    // JSON args (numbers are float64!)
+    Identifier    string // Optional identifier
+    BlockRerender bool   // Skip re-render if true
+    ComponentID   string // Auto-set for component messages
+}
+
+// Argument helpers
+msg.ArgsToInt() int           // float64 → int (JSON numbers are always float64)
+msg.ArgsToFloat() float64
+msg.ArgsToString() string
+msg.MustDecodeArgs(&target)   // Decode to struct (panics on error)
+
+// Response types
+gt.Respond()                                    // Basic re-render
+gt.RespondWithError(err)                        // Triggers RenderError()
+gt.RespondWithNextMsg(msg)                      // Chain message immediately
+gt.RespondWithDelayedNextMsg(msg, 33*time.Millisecond) // Chain with delay (for game loops)
+```
+
+## Triggering Messages from HTML
+
+```go
+// Basic message with args
+a.OnClick(gt.SendBasicMessage("ACTION", 42))
+
+// No arguments
+a.OnClick(gt.SendBasicMessageNoArgs("ACTION"))
+
+// Get value from input field
+a.OnKeyUp(gt.SendBasicMessageWithValueFromInput("SEARCH", "input-id"))
+
+// Serialize entire form to JSON
+a.OnChange(gt.BasicUpdateForm("FORM_UPDATE", "form-id"))
+
+// Conditional message
+a.OnClick(gt.IfElse("condition", msg1, msg2))
+```
+
+## HTML Generation
+
+```go
+import h "github.com/jpincas/go-tea/html"
+import a "github.com/jpincas/go-tea/attributes"
+
+// Basic pattern: Tag(attrs, ...children)
+h.Div(a.Attrs(a.Class("container"), a.Id("main")),
+    h.H1(a.Attrs(), h.Text("Title")),
+    h.P(a.Attrs(a.Class("intro")), h.Text("Content")),
+)
+
+// Text content
+h.Text("escaped content")
+h.Textf("formatted %d", value)
+
+// Raw HTML (XSS risk - use carefully)
+h.UnsafeRaw("<strong>bold</strong>")
+
+// Empty/nothing element
+h.Nothing()
+
+// Conditional rendering
+h.Div(...).RenderIf(condition)
+h.Div(...).RenderIfWithDefault(condition, fallbackElement)
+
+// Output
+element.Bytes()      // []byte
+element.String()     // string
+element.DocBytes()   // []byte with <!DOCTYPE html>
+```
+
+## Attributes
+
+```go
+import a "github.com/jpincas/go-tea/attributes"
+
+// Wrap attributes with Attrs()
+a.Attrs(a.Class("foo"), a.Id("bar"), a.Disabled())
+
+// Common attributes
+a.Class("foo")              // class="foo"
+a.ClassIf("active", cond)   // class="active" if cond is true
+a.Id("main")                // id="main"
+a.Href("/page")             // href="/page"
+a.Src("/image.png")         // src="/image.png"
+a.Type("text")              // type="text"
+a.Value("input-value")      // value="input-value"
+a.Placeholder("hint")       // placeholder="hint"
+a.Disabled()                // disabled (boolean)
+a.Checked()                 // checked (boolean)
+a.Custom("data-x", "val")   // data-x="val"
+
+// Inline styles
+a.Style(css.Color("red"), css.FontSize("16px"))
+
+// Event handlers (pass JS from gt.SendBasicMessage, etc.)
+a.OnClick(js)
+a.OnChange(js)
+a.OnKeyUp(js)
+a.OnSubmit(js)
+```
+
+## Routing
+
+```go
+// Register routes in Init()
+func (m *Model) Init(sid uuid.UUID) gt.State {
+    model := &Model{}
+    model.Register("/", homeHandler)
+    model.Register("/game", gameHandler)
+    return model
+}
+
+// Route handlers render views
+type RouteHandler func(State) []byte
+
+func homeHandler(s gt.State) []byte {
+    return renderHome(s.(*Model)).Bytes()
+}
+
+// OnRouteChange hook - called on every navigation
+func (m *Model) OnRouteChange(path string) {
+    if path == "/game" {
+        m.Game.Reset()
+    }
+    // Access query params
+    id := m.RouteParam("id")  // ?id=123
+}
+
+// Links auto-intercepted for SPA routing
+h.A(a.Attrs(a.Href("/game")), h.Text("Play"))
+
+// In Render(), use RenderRoute
+func (m *Model) Render() []byte {
+    return m.RenderRoute(m)
+}
+```
+
+## Component Namespacing
+
+Prevents message collisions when reusing components:
+
+```go
+type TagSelector struct {
+    gt.ComponentID
+    Tags []string
+}
+
+// Create instances with unique IDs
+nameSelector := TagSelector{ComponentID: "name-selector"}
+teamSelector := TagSelector{ComponentID: "team-selector"}
+
+// Register namespaced messages
+func (m *Model) Update() gt.MessageMap {
+    return gt.MergeMaps(
+        nameSelector.UniqueMsgMap(tagMessages),  // "name-selector_SELECT"
+        teamSelector.UniqueMsgMap(tagMessages),  // "team-selector_SELECT"
+    )
+}
+
+// In component render, use namespaced identifiers
+ts.UniqueMsg("SELECT")     // Prefixes message name
+ts.UniqueID("search-box")  // Prefixes HTML ID
+
+// Component message helpers
+ts.SendMessage("SELECT", args)
+ts.SendMessageNoArgs("CLEAR")
+ts.SendMessageWithValueFromInput("SEARCH", "input-id")
+```
+
+## Broadcasting
+
+Re-render all connected sessions (for chat, multiplayer, etc.):
+
+```go
+var app *gt.Application
+
+func main() {
+    app = gt.NewApp(&Model{})
+    app.Start(8080, "static")
+}
+
+func sendMessage(m gt.Message, s gt.State) gt.Response {
+    // Update shared state...
+    app.Broadcast()  // Re-renders ALL connected clients
+    return gt.Respond()
+}
+```
+
+## Testing
+
+```go
+import "github.com/jpincas/go-tea/tester"
+
+func TestCounter(t *testing.T) {
+    session := tester.NewSession(t, &Model{})
+
+    // IMPORTANT: JSON numbers are float64
+    session.Dispatch("INCREMENT_COUNTER", float64(1))
+
+    state := session.GetState().(*Model)
+    if state.Counter != 1 {
+        t.Errorf("Expected 1, got %d", state.Counter)
+    }
+
+    // Check rendered HTML
+    html := session.Render()
+}
+```
+
+## Gotchas
+
+1. **JSON numbers are float64** - Use `m.ArgsToInt()` not direct type assertion. In tests, pass `float64(1)` not `1`.
+2. **Embed gt.Router** - Model struct MUST embed `gt.Router` for routing to work.
+3. **Register routes in Init()** - Routes must be registered during initialization, not at package level.
+4. **Pointer receivers** - All State interface methods should use `*Model` receivers.
+5. **DelayedNextMsg runs async** - Chained messages run in goroutines; state is shared.
+6. **morphdom preserves focus** - Input focus and selection survive re-renders.
+7. **Messages are SCREAMING_SNAKE_CASE** - Convention for message naming.
+8. **Component separators differ** - Messages use `_` (UniqueMsg), IDs use `-` (UniqueID).
+
+## Project Structure
+
+```
+/                       # Core library
+  runtime.go           # Core engine, State interface, Application
+  component.go         # ComponentID namespacing
+  templatehelpers.go   # JS message construction helpers
+/html                  # h.Div(), h.Span(), h.Text(), etc.
+/attributes            # a.Class(), a.OnClick(), a.Attrs(), etc.
+/css                   # css.FontFamily(), css.Color(), etc.
+/js/gotea.js           # Client-side WebSocket, morphdom, routing
+/tester                # Testing utilities
+/example               # Demo app with multiple examples
+```
+
+## Running
+
+```bash
+# Run example app
+cd example && go run .
+# Visit http://localhost:8080
+
+# Run tests
+go test ./...
+```

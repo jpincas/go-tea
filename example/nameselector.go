@@ -3,8 +3,8 @@ package main
 import (
 	gt "github.com/jpincas/go-tea"
 	"github.com/jpincas/go-tea/example/tagselector"
-	a "github.com/jpincas/htmlfunc/attributes"
-	h "github.com/jpincas/htmlfunc/html"
+	a "github.com/jpincas/go-tea/attributes"
+	h "github.com/jpincas/go-tea/html"
 )
 
 // Name Selector (instantiation of Tag Selector)

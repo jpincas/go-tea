@@ -2,8 +2,8 @@ package main
 
 import (
 	gt "github.com/jpincas/go-tea"
-	a "github.com/jpincas/htmlfunc/attributes"
-	h "github.com/jpincas/htmlfunc/html"
+	a "github.com/jpincas/go-tea/attributes"
+	h "github.com/jpincas/go-tea/html"
 )
 
 var crashMessages gt.MessageMap = gt.MessageMap{

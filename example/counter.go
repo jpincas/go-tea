@@ -3,17 +3,16 @@ package main
 import (
 	"fmt"
 
-	gotea "github.com/jpincas/go-tea"
 	gt "github.com/jpincas/go-tea"
-	a "github.com/jpincas/htmlfunc/attributes"
-	h "github.com/jpincas/htmlfunc/html"
+	a "github.com/jpincas/go-tea/attributes"
+	h "github.com/jpincas/go-tea/html"
 )
 
 var counterMessages gt.MessageMap = gt.MessageMap{
 	"INCREMENT_COUNTER": IncrementCounter,
 }
 
-func IncrementCounter(m gotea.Message, s gt.State) gt.Response {
+func IncrementCounter(m gt.Message, s gt.State) gt.Response {
 	n := m.ArgsToInt()
 	state := model(s)
 	state.Counter = state.Counter + n

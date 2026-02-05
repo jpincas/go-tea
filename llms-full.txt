@@ -1,0 +1,1496 @@
+# Gotea
+
+> Go library implementing The Elm Architecture (TEA) for server-side rendered single-page web applications with WebSocket communication and morphdom DOM patching.
+
+Gotea keeps all application state and logic on the server. The browser acts as a "dumb terminal" - it sends messages via WebSocket and receives HTML patches. State mutations happen server-side, and morphdom efficiently updates the DOM without full page reloads.
+
+**Import path:** `github.com/jpincas/go-tea`
+
+**Key packages:**
+- `gotea` (aliased as `gt`) - Core runtime, interfaces, message handling
+- `github.com/jpincas/go-tea/html` (aliased as `h`) - HTML element generation
+- `github.com/jpincas/go-tea/attributes` (aliased as `a`) - HTML attributes
+- `github.com/jpincas/go-tea/css` - CSS property helpers
+- `github.com/jpincas/go-tea/tester` - Testing utilities
+
+---
+
+## Core Interfaces
+
+```go
+// State - every application must implement this
+type State interface {
+    Routable                    // Embed gt.Router in your struct
+    Init(uuid.UUID) State       // Initialize state for new session
+    Update() MessageMap         // Return message handlers
+    Render() []byte             // Render current state to HTML
+    RenderError(error) []byte   // Render error state
+}
+
+// Persistable - optional, enables state restoration across restarts
+type Persistable interface {
+    Serialize() ([]byte, error)
+    Deserialize([]byte) error
+}
+
+// Routable - fulfilled by embedding gt.Router
+type Routable interface {
+    SetNewRoute(string)
+    GetRoute() string
+    RouteParam(string) string
+    OnRouteChange(string)       // User must implement this
+}
+```
+
+---
+
+## Complete Working Example
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/google/uuid"
+    gt "github.com/jpincas/go-tea"
+    a "github.com/jpincas/go-tea/attributes"
+    h "github.com/jpincas/go-tea/html"
+    "github.com/jpincas/go-tea/css"
+)
+
+// Model holds all application state
+type Model struct {
+    gt.Router  // MUST embed for routing
+    sessionID uuid.UUID
+    Counter   int
+    Name      string
+}
+
+// Init creates initial state for a new session
+func (m *Model) Init(sid uuid.UUID) gt.State {
+    model := &Model{sessionID: sid, Counter: 0}
+
+    // Register routes
+    model.Register("/", func(s gt.State) []byte {
+        return renderHome(s.(*Model)).Bytes()
+    })
+    model.Register("/about", func(s gt.State) []byte {
+        return renderAbout().Bytes()
+    })
+
+    return model
+}
+
+// Update returns all message handlers
+func (m *Model) Update() gt.MessageMap {
+    return gt.MergeMaps(
+        counterMessages,
+        formMessages,
+    )
+}
+
+// Render outputs the current state as HTML
+func (m *Model) Render() []byte {
+    return m.RenderRoute(m)
+}
+
+// RenderError handles error states
+func (m *Model) RenderError(err error) []byte {
+    return []byte(fmt.Sprintf("<div class='error'>Error: %s</div>", err))
+}
+
+// OnRouteChange handles route-specific logic
+func (m *Model) OnRouteChange(path string) {
+    // Reset state on navigation, fetch data, etc.
+}
+
+// Message handlers
+var counterMessages = gt.MessageMap{
+    "INCREMENT": func(msg gt.Message, s gt.State) gt.Response {
+        s.(*Model).Counter += msg.ArgsToInt()
+        return gt.Respond()
+    },
+    "RESET": func(msg gt.Message, s gt.State) gt.Response {
+        s.(*Model).Counter = 0
+        return gt.Respond()
+    },
+}
+
+var formMessages = gt.MessageMap{
+    "UPDATE_NAME": func(msg gt.Message, s gt.State) gt.Response {
+        s.(*Model).Name = msg.ArgsToString()
+        return gt.Respond()
+    },
+}
+
+// Views
+func renderHome(m *Model) h.Element {
+    return h.Html(a.Attrs(a.Lang("en")),
+        h.Head(a.Attrs(),
+            h.Meta(a.Attrs(a.Charset("utf-8"))),
+            h.Title(a.Attrs(), h.Text("My App")),
+            h.Script(a.Attrs(a.Src("/static/gotea.js"), a.Defer(true))),
+        ),
+        h.Body(a.Attrs(a.Class("container")),
+            h.Nav(a.Attrs(),
+                h.A(a.Attrs(a.Href("/")), h.Text("Home")),
+                h.A(a.Attrs(a.Href("/about")), h.Text("About")),
+            ),
+            h.Div(a.Attrs(a.Class("counter")),
+                h.Button(
+                    a.Attrs(a.OnClick(gt.SendBasicMessage("INCREMENT", -1))),
+                    h.Text("-"),
+                ),
+                h.Span(a.Attrs(), h.Text(fmt.Sprintf("%d", m.Counter))),
+                h.Button(
+                    a.Attrs(a.OnClick(gt.SendBasicMessage("INCREMENT", 1))),
+                    h.Text("+"),
+                ),
+                h.Button(
+                    a.Attrs(a.OnClick(gt.SendBasicMessageNoArgs("RESET"))),
+                    h.Text("Reset"),
+                ),
+            ),
+            h.Form(a.Attrs(a.Id("name-form")),
+                h.Input(a.Attrs(
+                    a.Type("text"),
+                    a.Id("name-input"),
+                    a.Value(m.Name),
+                    a.Placeholder("Enter name"),
+                    a.OnKeyUp(gt.SendBasicMessageWithValueFromInput("UPDATE_NAME", "name-input")),
+                )),
+            ),
+            h.P(a.Attrs(), h.Text("Hello, "+m.Name)),
+        ),
+    )
+}
+
+func renderAbout() h.Element {
+    return h.Div(a.Attrs(), h.Text("About page"))
+}
+
+func main() {
+    app := gt.NewApp(&Model{})
+    app.Start(8080, "static")
+}
+```
+
+---
+
+## Message Handling
+
+### Message Structure
+
+```go
+type Message struct {
+    Message       string // Message name (SCREAMING_SNAKE_CASE by convention)
+    Arguments     any    // JSON args (numbers are float64!)
+    Identifier    string // Optional identifier
+    BlockRerender bool   // Skip re-render if true
+    ComponentID   string // Auto-set for component messages
+}
+```
+
+### Argument Helpers
+
+```go
+msg.ArgsToInt() int           // float64 → int (JSON numbers are always float64)
+msg.ArgsToUint() uint         // float64 → uint
+msg.ArgsToFloat() float64     // Direct float64
+msg.ArgsToString() string     // Direct string
+msg.MustDecodeArgs(&target)   // Decode JSON to struct (panics on error)
+msg.GetComponentID() ComponentID  // Get source component
+msg.FromComponent(c ComponentID) bool  // Check if from specific component
+```
+
+### Response Types
+
+```go
+type Response struct {
+    NextMsg *Message
+    Delay   time.Duration
+    Error   error
+}
+
+// Constructors
+gt.Respond()                                    // Basic re-render
+gt.RespondWithError(err)                        // Triggers RenderError()
+gt.RespondWithNextMsg(msg)                      // Chain message immediately (0 delay)
+gt.RespondWithDelayedNextMsg(msg, 33*time.Millisecond) // Chain with delay
+```
+
+### Handler Pattern
+
+```go
+type MessageHandler func(Message, State) Response
+type MessageMap map[string]MessageHandler
+
+// Helper to combine maps
+gt.MergeMaps(map1, map2, map3) MessageMap
+```
+
+---
+
+## Triggering Messages from HTML
+
+### Basic Message Functions
+
+```go
+// Message with arguments (any JSON-serializable value)
+gt.SendBasicMessage(msgName string, args any) string
+// Usage: a.OnClick(gt.SendBasicMessage("ACTION", 42))
+// Usage: a.OnClick(gt.SendBasicMessage("SET_USER", map[string]string{"name": "Jon"}))
+
+// No arguments
+gt.SendBasicMessageNoArgs(msgName string) string
+// Usage: a.OnClick(gt.SendBasicMessageNoArgs("TOGGLE"))
+
+// Get value from input field by ID
+gt.SendBasicMessageWithValueFromInput(msgName, inputID string) string
+// Usage: a.OnKeyUp(gt.SendBasicMessageWithValueFromInput("SEARCH", "search-input"))
+
+// Serialize entire form to JSON
+gt.BasicUpdateForm(msgName, formID string) string
+// Usage: a.OnChange(gt.BasicUpdateForm("FORM_UPDATE", "my-form"))
+
+// Conditional message
+gt.IfElse(condition, msg1, msg2 string) string
+// Usage: a.OnClick(gt.IfElse("this.checked", msgOn, msgOff))
+```
+
+### Lower-Level Functions
+
+```go
+// Full control with Message struct
+gt.SendMessage(m Message) string
+gt.SendMessageWithValueFromInput(m Message, inputID string) string
+gt.SendMessageWithValueFromThisInput(m Message) string  // Uses active element
+gt.UpdateFormState(m Message, formID string) string
+```
+
+---
+
+## HTML Package Reference
+
+### Import
+
+```go
+import h "github.com/jpincas/go-tea/html"
+```
+
+### Element Type
+
+```go
+type Element struct {
+    Raw           string              // Raw HTML bypass
+    Tag           string              // HTML tag name
+    Attributes    attributes.Attributes
+    Elements      Elements            // Child elements
+    Text          string              // Text content
+    IsSelfClosing bool
+}
+
+type Elements []Element
+```
+
+### Element Methods
+
+```go
+// Output
+element.Bytes() []byte
+element.String() string
+element.DocBytes() []byte           // With <!DOCTYPE html>
+element.DocString() string
+
+// Writing
+element.Write(w io.Writer) error
+element.WriteDoc(w io.Writer) error
+element.Serve(w http.ResponseWriter) error
+element.ServeDoc(w http.ResponseWriter) error
+
+// Conditional rendering
+element.RenderIf(condition bool) Element
+element.RenderIfWithDefault(condition bool, fallback Element) Element
+
+// Attributes
+element.AppendAttrs(attrs ...Attribute)
+element.IsEmpty() bool
+```
+
+### Elements Methods
+
+```go
+elements.Output(tabs int) string
+elements.String() string
+elements.Join(separator Element) Elements
+elements.JoinIf(separator Element) Elements  // Only non-empty
+elements.AppendAttrs(attrs ...Attribute)
+```
+
+### Helper Functions
+
+```go
+h.Els(elements ...Element) Elements           // Create element slice
+h.FlattenElementsList([]Elements) Elements    // Flatten nested lists
+h.UnsafeRaw(htmlString string) Element        // Raw HTML (XSS risk!)
+h.RawElement(b []byte) Element
+h.RawElementFromString(s string) Element
+```
+
+### Complete Tag Reference
+
+All tags follow pattern: `Tag(attrs Attributes, elements ...Element) Element`
+Self-closing tags: `Tag(attrs Attributes) Element`
+
+**Document Structure:**
+- `Html()`, `Head()`, `Body()`, `Title()`, `Script()`, `NoScript()`, `Style()`
+- Self-closing: `Meta()`, `Link()`, `Base()`
+
+**Sectioning:**
+- `Header()`, `Footer()`, `Main()`, `Nav()`, `Section()`, `Article()`, `Aside()`, `Address()`, `Hgroup()`
+
+**Headings:**
+- `H1()`, `H2()`, `H3()`, `H4()`, `H5()`, `H6()`
+
+**Content Grouping:**
+- `Div()`, `P()`, `Pre()`, `Blockquote()`, `Figure()`, `Figcaption()`
+- Self-closing: `Hr()`
+
+**Text Semantics:**
+- `A()`, `Em()`, `Strong()`, `Small()`, `S()`, `Cite()`, `Q()`, `Dfn()`, `Abbr()`
+- `Data()`, `Time()`, `Code()`, `Var()`, `Samp()`, `Kbd()`, `Sub()`, `Sup()`
+- `I()`, `B()`, `U()`, `Mark()`, `Ruby()`, `Rt()`, `Rp()`, `Bdi()`, `Bdo()`, `Span()`
+- Self-closing: `Br()`, `Wbr()`
+
+**Lists:**
+- `Ul()`, `Ol()`, `Li()`, `Dl()`, `Dt()`, `Dd()`
+
+**Tables:**
+- `Table()`, `Caption()`, `Colgroup()`, `THead()`, `TBody()`, `TFoot()`, `Tr()`, `Th()`, `Td()`
+- Self-closing: `Col()`
+
+**Forms:**
+- `Form()`, `Fieldset()`, `Legend()`, `Label()`, `Button()`, `Select()`, `Datalist()`
+- `Optgroup()`, `Option()`, `TextArea()`, `Output()`, `Progress()`, `Meter()`
+- Self-closing: `Input()`
+
+**Interactive:**
+- `Details()`, `Summary()`, `Dialog()`
+
+**Media:**
+- `Picture()`, `Video()`, `Audio()`, `Canvas()`
+- Self-closing: `Img()`, `Source()`, `Track()`
+
+**Embedded:**
+- `Iframe()`, `Object()`
+- Self-closing: `Embed()`, `Param()`
+
+**SVG:**
+- `SVG()`, `G()`, `Defs()`, `Symbol()`, `Use()`, `Path()`, `Rect()`, `Circle()`
+- `Ellipse()`, `Line()`, `Polyline()`, `Polygon()`, `SVGText()`, `TSpan()`, `TextPath()`
+- `Image()`, `ClipPathEl()`, `MaskEl()`, `LinearGradient()`, `RadialGradient()`, `Stop()`
+- `Pattern()`, `Filter()`, `FeGaussianBlur()`, `FeOffset()`, `FeMerge()`, `FeMergeNode()`
+- `FeBlend()`, `FeColorMatrix()`, `FeDropShadow()`, `ForeignObject()`
+
+**Template:**
+- `Template()`, `Slot()`
+
+**Text Content:**
+```go
+h.Text(value interface{}) Element           // HTML-escaped text
+h.Textf(format string, args interface{}) Element  // Formatted text
+h.BoldText(value interface{}) Element       // Wrapped in <span style="font-weight:bold">
+h.ItalicText(value interface{}) Element     // Wrapped in <span style="font-style:italic">
+h.Nothing(attrs, ...elements) Element       // Empty/null element
+```
+
+---
+
+## Attributes Package Reference
+
+### Import
+
+```go
+import a "github.com/jpincas/go-tea/attributes"
+```
+
+### Attribute Type
+
+```go
+type Attribute struct {
+    Name, Val              string
+    IsBool                 bool
+    RenderWithSingleQuotes bool
+}
+
+type Attributes []Attribute
+```
+
+### Attribute Methods
+
+```go
+attr.RenderIf(condition bool) Attribute  // Conditional attribute
+```
+
+### Wrapper Function
+
+```go
+a.Attrs(attrs ...Attribute) Attributes
+```
+
+### Global Attributes
+
+```go
+a.Class(s string) Attribute
+a.ClassIf(s string, condition bool) Attribute
+a.Classes(classes []string) Attribute
+a.ClassesIf(classes []string, appliers []bool) Attribute
+
+a.Id(s string) Attribute
+a.Title(s string) Attribute
+a.Lang(s string) Attribute
+a.Dir(s string) Attribute
+a.Hidden(b bool) Attribute
+a.Tabindex(n int) Attribute
+a.Accesskey(s string) Attribute
+a.Contenteditable(b bool) Attribute
+a.Draggable(s string) Attribute
+a.Spellcheck(s string) Attribute
+a.Translate(s string) Attribute
+a.Data(suffix, value string) Attribute  // data-{suffix}="{value}"
+a.Custom(name, value string) Attribute  // Any attribute
+a.Style(styles ...css.KeyValuePair) Attribute
+```
+
+### Form Attributes
+
+```go
+a.Name(s string) Attribute
+a.Value(s string) Attribute
+a.Type(s string) Attribute           // "text", "password", "email", "number", etc.
+a.Placeholder(s string) Attribute
+a.Required(b bool) Attribute
+a.Disabled(b bool) Attribute
+a.Readonly(b bool) Attribute
+a.Checked(b bool) Attribute
+a.Selected(b bool) Attribute
+a.Autofocus(b bool) Attribute
+a.Autocomplete(s string) Attribute   // "on", "off", "name", "email", etc.
+a.Form(s string) Attribute
+a.Formaction(s string) Attribute
+a.Formmethod(s string) Attribute
+a.Formtarget(s string) Attribute
+a.Accept(s string) Attribute
+a.Inputmode(s string) Attribute      // "text", "numeric", "tel", "email", etc.
+a.Min(s string) Attribute
+a.Max(s string) Attribute
+a.MinLength(n int) Attribute
+a.MaxLength(n int) Attribute
+a.Pattern(s string) Attribute
+a.Step(s string) Attribute
+a.Multiple(b bool) Attribute
+a.List(s string) Attribute
+a.Rows(n int) Attribute
+a.Cols(n int) Attribute
+a.Wrap(s string) Attribute           // "soft", "hard"
+a.Size(n int) Attribute
+a.For(s string) Attribute
+a.Method(s string) Attribute         // "get", "post"
+a.Action(s string) Attribute
+```
+
+### Link/Navigation Attributes
+
+```go
+a.Href(s string) Attribute
+a.Target(s string) Attribute         // "_blank", "_self", "_parent", "_top"
+a.Rel(s string) Attribute            // "noopener", "noreferrer", "stylesheet", etc.
+a.Download(s string) Attribute
+a.Hreflang(s string) Attribute
+a.Ping(s string) Attribute
+```
+
+### Media Attributes
+
+```go
+a.Src(s string) Attribute
+a.Alt(s string) Attribute
+a.Width(s string) Attribute
+a.Height(s string) Attribute
+a.Srcset(s string) Attribute
+a.Sizes(s string) Attribute
+a.Media(s string) Attribute
+a.Autoplay(b bool) Attribute
+a.Controls(b bool) Attribute
+a.Loop(b bool) Attribute
+a.Muted(b bool) Attribute
+a.Poster(s string) Attribute
+a.Preload(s string) Attribute        // "none", "metadata", "auto"
+a.Playsinline(b bool) Attribute
+```
+
+### Script/Resource Attributes
+
+```go
+a.Defer(b bool) Attribute
+a.Async(b bool) Attribute
+a.As(s string) Attribute
+a.Integrity(s string) Attribute
+a.CrossOrigin(s string) Attribute
+a.Nonce(s string) Attribute
+```
+
+### SVG Attributes
+
+```go
+a.ViewBox(s string) Attribute        // "0 0 100 100"
+a.Stroke(s string) Attribute
+a.Fill(s string) Attribute
+a.StrokeWidth(f float64) Attribute
+a.StrokeLineCap(s string) Attribute  // "butt", "round", "square"
+a.StrokeLineJoin(s string) Attribute // "miter", "round", "bevel"
+a.StrokeDasharray(s string) Attribute
+a.StrokeDashoffset(s string) Attribute
+a.StrokeOpacity(f float64) Attribute
+a.FillOpacity(f float64) Attribute
+a.FillRule(s string) Attribute       // "nonzero", "evenodd"
+a.D(s string) Attribute              // Path data
+a.Points(s string) Attribute
+a.X(f float64) Attribute
+a.Y(f float64) Attribute
+a.X1(f float64) Attribute
+a.Y1(f float64) Attribute
+a.X2(f float64) Attribute
+a.Y2(f float64) Attribute
+a.CX(f float64) Attribute
+a.CY(f float64) Attribute
+a.R(f float64) Attribute
+a.RX(f float64) Attribute
+a.RY(f float64) Attribute
+a.Transform(s string) Attribute
+a.PathLength(f float64) Attribute
+a.PreserveAspectRatio(s string) Attribute
+a.ClipPath(s string) Attribute
+a.Mask(s string) Attribute
+a.GradientUnits(s string) Attribute
+a.GradientTransform(s string) Attribute
+a.Offset(s string) Attribute
+a.StopColor(s string) Attribute
+a.StopOpacity(f float64) Attribute
+a.XlinkHref(s string) Attribute
+a.TextAnchor(s string) Attribute     // "start", "middle", "end"
+a.DominantBaseline(s string) Attribute
+```
+
+### Event Handlers
+
+All take JavaScript code string (use gt.SendBasicMessage, etc.):
+
+**Mouse Events:**
+```go
+a.OnClick(js string) Attribute
+a.OnDblclick(js string) Attribute
+a.OnMousedown(js string) Attribute
+a.OnMouseup(js string) Attribute
+a.OnMouseover(js string) Attribute
+a.OnMouseout(js string) Attribute
+a.OnMousemove(js string) Attribute
+a.OnMouseenter(js string) Attribute
+a.OnMouseleave(js string) Attribute
+a.OnContextmenu(js string) Attribute
+```
+
+**Keyboard Events:**
+```go
+a.OnKeydown(js string) Attribute
+a.OnKeyUp(js string) Attribute
+a.OnKeypress(js string) Attribute
+```
+
+**Focus Events:**
+```go
+a.OnFocus(js string) Attribute
+a.OnBlur(js string) Attribute
+```
+
+**Form Events:**
+```go
+a.OnChange(js string) Attribute
+a.OnInput(js string) Attribute
+a.OnSubmit(js string) Attribute
+a.OnReset(js string) Attribute
+a.OnInvalid(js string) Attribute
+```
+
+**Document/Window Events:**
+```go
+a.OnLoad(js string) Attribute
+a.OnError(js string) Attribute
+a.OnScroll(js string) Attribute
+a.OnResize(js string) Attribute
+```
+
+**Media Events:**
+```go
+a.OnPlay(js string) Attribute
+a.OnPause(js string) Attribute
+a.OnEnded(js string) Attribute
+a.OnLoadeddata(js string) Attribute
+a.OnCanplay(js string) Attribute
+a.OnTimeupdate(js string) Attribute
+```
+
+**Drag Events:**
+```go
+a.OnDrag(js string) Attribute
+a.OnDragstart(js string) Attribute
+a.OnDragend(js string) Attribute
+a.OnDragover(js string) Attribute
+a.OnDragenter(js string) Attribute
+a.OnDragleave(js string) Attribute
+a.OnDrop(js string) Attribute
+```
+
+**Touch Events:**
+```go
+a.OnTouchstart(js string) Attribute
+a.OnTouchend(js string) Attribute
+a.OnTouchmove(js string) Attribute
+a.OnTouchcancel(js string) Attribute
+```
+
+**Clipboard Events:**
+```go
+a.OnCopy(js string) Attribute
+a.OnCut(js string) Attribute
+a.OnPaste(js string) Attribute
+```
+
+### ARIA Attributes
+
+```go
+a.Role(s string) Attribute
+a.AriaLabel(s string) Attribute
+a.AriaLabelledby(s string) Attribute
+a.AriaDescribedby(s string) Attribute
+a.AriaHidden(b bool) Attribute
+a.AriaExpanded(b bool) Attribute
+a.AriaControls(s string) Attribute
+a.AriaLive(s string) Attribute       // "off", "polite", "assertive"
+a.AriaAtomic(b bool) Attribute
+a.AriaBusy(b bool) Attribute
+a.AriaCurrent(s string) Attribute
+a.AriaDisabled(b bool) Attribute
+a.AriaSelected(b bool) Attribute
+a.AriaPressed(s string) Attribute
+a.AriaChecked(s string) Attribute
+a.AriaInvalid(s string) Attribute
+a.AriaRequired(b bool) Attribute
+a.AriaReadonly(b bool) Attribute
+a.AriaValuenow(f float64) Attribute
+a.AriaValuemin(f float64) Attribute
+a.AriaValuemax(f float64) Attribute
+a.AriaValuetext(s string) Attribute
+a.AriaModal(b bool) Attribute
+a.AriaHaspopup(s string) Attribute
+a.AriaOwns(s string) Attribute
+a.AriaActivedescendant(s string) Attribute
+a.AriaSort(s string) Attribute
+a.AriaColcount(n int) Attribute
+a.AriaRowcount(n int) Attribute
+a.AriaColindex(n int) Attribute
+a.AriaRowindex(n int) Attribute
+a.AriaColspan(n int) Attribute
+a.AriaRowspan(n int) Attribute
+a.AriaLevel(n int) Attribute
+a.AriaSetsize(n int) Attribute
+a.AriaPosinset(n int) Attribute
+```
+
+### Table Attributes
+
+```go
+a.CellPadding(pixels int) Attribute
+a.CellSpacing(pixels int) Attribute
+a.Border(pixels int) Attribute
+a.ColSpan(n int) Attribute
+a.RowSpan(n int) Attribute
+a.Scope(s string) Attribute          // "row", "col", "rowgroup", "colgroup"
+a.Headers(s string) Attribute
+a.Align(s string) Attribute
+a.VAlign(s string) Attribute
+```
+
+### Meta/Document Attributes
+
+```go
+a.Charset(s string) Attribute        // "utf-8"
+a.Content(s string) Attribute
+a.HttpEquiv(s string) Attribute
+a.Property(s string) Attribute       // Open Graph: "og:title", etc.
+a.Itemprop(s string) Attribute
+a.Itemscope(b bool) Attribute
+a.Itemtype(s string) Attribute
+a.Xmlns(s string) Attribute
+```
+
+### Iframe Attributes
+
+```go
+a.Sandbox(s string) Attribute
+a.Allow(s string) Attribute
+a.Allowfullscreen(b bool) Attribute
+a.Loading(s string) Attribute        // "lazy", "eager"
+a.Referrerpolicy(s string) Attribute
+```
+
+### Miscellaneous Attributes
+
+```go
+a.Datetime(s string) Attribute
+a.Open(b bool) Attribute
+a.Cite(s string) Attribute
+a.Label(s string) Attribute
+a.High(f float64) Attribute
+a.Low(f float64) Attribute
+a.Optimum(f float64) Attribute
+a.Span(n int) Attribute
+a.Start(n int) Attribute
+a.Reversed(b bool) Attribute
+a.Kind(s string) Attribute           // "subtitles", "captions", etc.
+a.Srclang(s string) Attribute
+```
+
+---
+
+## CSS Package Reference
+
+### Import
+
+```go
+import "github.com/jpincas/go-tea/css"
+```
+
+### Usage with Style Attribute
+
+```go
+a.Style(
+    css.Display(css.Flex),
+    css.JustifyContent(css.Center),
+    css.AlignItems(css.Center),
+    css.Gap("1rem"),
+    css.Padding("20px"),
+    css.BackgroundColor("#f0f0f0"),
+    css.BorderRadius("8px"),
+)
+```
+
+### KeyValuePair Type
+
+```go
+type KeyValuePair struct {
+    key     string
+    value   string
+    Include bool  // Conditional inclusion
+}
+
+// All CSS functions accept optional `include ...bool` parameter
+css.Display("flex", condition)  // Only included if condition is true
+```
+
+### Helper Functions
+
+```go
+css.WithUnits(value interface{}, unit string) string  // "100" + "px" → "100px"
+css.NoUnits(value interface{}) string
+css.Fonts(fonts []string) string                      // Join font family list
+css.MultipleArgs(ss ...string) string                 // Space-separated
+css.MultipleValues(ss ...string) string               // Comma-separated
+css.RGBA(r, g, b, a float64) string                   // "rgba(255,0,0,0.5)"
+css.RGB(r, g, b float64) string                       // "rgb(255,0,0)"
+css.HSL(h, s, l float64) string                       // "hsl(180,50%,50%)"
+css.HSLA(h, s, l, a float64) string
+css.URL(s string) string                              // "url('path')"
+css.Var(name string) string                           // "var(--name)"
+css.VarWithFallback(name, fallback string) string     // "var(--name, fallback)"
+css.Calc(expression string) string                    // "calc(100% - 20px)"
+```
+
+### Common CSS Constants
+
+```go
+// Units
+css.Px, css.Pt, css.Percent, css.Em, css.Rem
+css.Vh, css.Vw, css.Vmin, css.Vmax, css.Ch, css.Ex
+
+// Values
+css.Zero, css.None, css.Auto, css.Inherit, css.Initial, css.Unset
+css.FitContent, css.MinContent, css.MaxContent
+
+// Display
+css.Block, css.Inline, css.InlineBlock
+css.Flex, css.InlineFlex, css.Grid, css.InlineGrid
+
+// Position
+css.Static, css.Relative, css.Absolute, css.Fixed, css.Sticky
+
+// Flexbox
+css.FlexStart, css.FlexEnd, css.Center, css.SpaceBetween, css.SpaceAround, css.SpaceEvenly
+css.Stretch, css.Baseline
+css.Row, css.RowReverse, css.Column, css.ColumnReverse
+css.Wrap, css.NoWrap, css.WrapReverse
+
+// Alignment
+css.Start, css.End, css.Left, css.Right, css.Top, css.Bottom
+
+// Border Styles
+css.Solid, css.Dashed, css.Dotted, css.Double, css.Groove, css.Ridge, css.Inset, css.Outset
+
+// Overflow
+css.Visible, css.Hidden, css.Scroll, css.Clip
+
+// Font
+css.Bold, css.Normal, css.Lighter, css.Bolder
+css.Italic, css.Oblique
+css.Underline, css.Overline, css.LineThrough
+
+// Text
+css.Capitalize, css.Uppercase, css.Lowercase
+css.PreWrap, css.PreLine, css.Pre, css.BreakSpaces
+
+// Colors
+css.Transparent, css.CurrentColor
+
+// Cursor
+css.Pointer, css.Default, css.Text, css.Move, css.NotAllowed
+css.Grab, css.Grabbing, css.Crosshair, css.ZoomIn, css.ZoomOut
+
+// Object Fit
+css.ObjectFill, css.ObjectContain, css.ObjectCover, css.ObjectScaleDown
+
+// Box Sizing
+css.ContentBox, css.BorderBox
+
+// Page Break
+css.Always, css.Avoid
+```
+
+### Predefined Font Stacks
+
+```go
+css.FontFamilyHelvetica  // Helvetica Neue, Helvetica, Arial, sans-serif
+css.FontFamilyCourierNew // Courier New, monospace
+css.FontFamilySystem     // System UI stack
+css.FontFamilyMonospace  // Developer fonts
+css.FontFamilySerif      // Georgia, Times, etc.
+```
+
+### Complete CSS Property Reference
+
+**Box Model:**
+```go
+css.Width(s string) KeyValuePair
+css.Height(s string) KeyValuePair
+css.MinWidth(s string) KeyValuePair
+css.MinHeight(s string) KeyValuePair
+css.MaxWidth(s string) KeyValuePair
+css.MaxHeight(s string) KeyValuePair
+css.BoxSizing(s string) KeyValuePair
+css.Margin(s string) KeyValuePair
+css.MarginVertHoriz(vertical, horizontal string) KeyValuePair
+css.MarginTop(s string) KeyValuePair
+css.MarginRight(s string) KeyValuePair
+css.MarginBottom(s string) KeyValuePair
+css.MarginLeft(s string) KeyValuePair
+css.Padding(s string) KeyValuePair
+css.PaddingVertHoriz(vertical, horizontal string) KeyValuePair
+css.PaddingTop(s string) KeyValuePair
+css.PaddingRight(s string) KeyValuePair
+css.PaddingBottom(s string) KeyValuePair
+css.PaddingLeft(s string) KeyValuePair
+```
+
+**Positioning:**
+```go
+css.Position(s string) KeyValuePair
+css.Top_(s string) KeyValuePair
+css.Right_(s string) KeyValuePair
+css.Bottom_(s string) KeyValuePair
+css.Left_(s string) KeyValuePair
+css.ZIndex(n int) KeyValuePair
+css.Float(s string) KeyValuePair
+css.Clear(s string) KeyValuePair
+```
+
+**Display & Visibility:**
+```go
+css.Display(s string) KeyValuePair
+css.Visibility(s string) KeyValuePair
+css.Opacity(s string) KeyValuePair
+css.Overflow(s string) KeyValuePair
+css.OverflowX(s string) KeyValuePair
+css.OverflowY(s string) KeyValuePair
+```
+
+**Flexbox:**
+```go
+css.FlexDirection(s string) KeyValuePair
+css.FlexWrap(s string) KeyValuePair
+css.FlexFlow(s string) KeyValuePair
+css.JustifyContent(s string) KeyValuePair
+css.AlignItems(s string) KeyValuePair
+css.AlignContent(s string) KeyValuePair
+css.AlignSelf(s string) KeyValuePair
+css.Flex_(s string) KeyValuePair
+css.FlexGrow(n float64) KeyValuePair
+css.FlexShrink(n float64) KeyValuePair
+css.FlexBasis(s string) KeyValuePair
+css.Order(n int) KeyValuePair
+css.Gap(s string) KeyValuePair
+css.RowGap(s string) KeyValuePair
+css.ColumnGap(s string) KeyValuePair
+```
+
+**Grid:**
+```go
+css.GridTemplateColumns(s string) KeyValuePair
+css.GridTemplateRows(s string) KeyValuePair
+css.GridTemplateAreas(s string) KeyValuePair
+css.GridTemplate(s string) KeyValuePair
+css.GridColumn(s string) KeyValuePair
+css.GridColumnStart(n int) KeyValuePair
+css.GridColumnEnd(n int) KeyValuePair
+css.GridRow(s string) KeyValuePair
+css.GridRowStart(n int) KeyValuePair
+css.GridRowEnd(n int) KeyValuePair
+css.GridArea(s string) KeyValuePair
+css.GridAutoFlow(s string) KeyValuePair
+css.GridAutoColumns(s string) KeyValuePair
+css.GridAutoRows(s string) KeyValuePair
+css.JustifyItems(s string) KeyValuePair
+css.JustifySelf(s string) KeyValuePair
+css.PlaceContent(s string) KeyValuePair
+css.PlaceItems(s string) KeyValuePair
+css.PlaceSelf(s string) KeyValuePair
+```
+
+**Typography:**
+```go
+css.FontFamily(s string) KeyValuePair
+css.FontSize(s string) KeyValuePair
+css.FontWeight(s string) KeyValuePair
+css.FontStyle(s string) KeyValuePair
+css.FontVariant(s string) KeyValuePair
+css.LineHeight(s string) KeyValuePair
+css.LetterSpacing(s string) KeyValuePair
+css.WordSpacing(s string) KeyValuePair
+css.TextAlign(s string) KeyValuePair
+css.TextDecoration(s string) KeyValuePair
+css.TextTransform(s string) KeyValuePair
+css.TextIndent(s string) KeyValuePair
+css.TextShadow(s string) KeyValuePair
+css.TextOverflow(s string) KeyValuePair
+css.WhiteSpace(s string) KeyValuePair
+css.WordBreak(s string) KeyValuePair
+css.WordWrap(s string) KeyValuePair
+css.OverflowWrap(s string) KeyValuePair
+css.VerticalAlign(s string) KeyValuePair
+css.Direction(s string) KeyValuePair
+css.UnicodeBidi(s string) KeyValuePair
+```
+
+**Colors & Backgrounds:**
+```go
+css.Color(s string) KeyValuePair
+css.BackgroundColor(s string) KeyValuePair
+css.BackgroundImage(s string) KeyValuePair
+css.BackgroundRepeat(s string) KeyValuePair
+css.BackgroundPosition(s string) KeyValuePair
+css.BackgroundSize(s string) KeyValuePair
+css.BackgroundAttachment(s string) KeyValuePair
+css.BackgroundClip(s string) KeyValuePair
+css.BackgroundOrigin(s string) KeyValuePair
+css.Background(s string) KeyValuePair
+```
+
+**Borders:**
+```go
+css.Border(s string) KeyValuePair
+css.BorderWidth(s string) KeyValuePair
+css.BorderStyle(s string) KeyValuePair
+css.BorderColor(s string) KeyValuePair
+css.BorderTop(s string) KeyValuePair
+css.BorderRight(s string) KeyValuePair
+css.BorderBottom(s string) KeyValuePair
+css.BorderLeft(s string) KeyValuePair
+css.BorderRadius(s string) KeyValuePair
+css.BorderTopLeftRadius(s string) KeyValuePair
+css.BorderTopRightRadius(s string) KeyValuePair
+css.BorderBottomLeftRadius(s string) KeyValuePair
+css.BorderBottomRightRadius(s string) KeyValuePair
+css.BorderCollapse(s string) KeyValuePair
+css.BorderSpacing(s string) KeyValuePair
+```
+
+**Outline:**
+```go
+css.Outline(s string) KeyValuePair
+css.OutlineWidth(s string) KeyValuePair
+css.OutlineStyle(s string) KeyValuePair
+css.OutlineColor(s string) KeyValuePair
+css.OutlineOffset(s string) KeyValuePair
+```
+
+**Effects:**
+```go
+css.BoxShadow(s string) KeyValuePair
+css.Filter(s string) KeyValuePair
+css.BackdropFilter(s string) KeyValuePair
+css.ClipPath(s string) KeyValuePair
+css.ObjectFit(s string) KeyValuePair
+css.ObjectPosition(s string) KeyValuePair
+```
+
+**Transforms:**
+```go
+css.Transform(s string) KeyValuePair
+css.TransformOrigin(s string) KeyValuePair
+css.TransformStyle(s string) KeyValuePair
+css.Perspective(s string) KeyValuePair
+css.PerspectiveOrigin(s string) KeyValuePair
+css.BackfaceVisibility(s string) KeyValuePair
+```
+
+**Transitions & Animations:**
+```go
+css.Transition(s string) KeyValuePair
+css.TransitionProperty(s string) KeyValuePair
+css.TransitionDuration(s string) KeyValuePair
+css.TransitionTimingFunction(s string) KeyValuePair
+css.TransitionDelay(s string) KeyValuePair
+css.Animation(s string) KeyValuePair
+css.AnimationName(s string) KeyValuePair
+css.AnimationDuration(s string) KeyValuePair
+css.AnimationTimingFunction(s string) KeyValuePair
+css.AnimationDelay(s string) KeyValuePair
+css.AnimationIterationCount(s string) KeyValuePair
+css.AnimationDirection(s string) KeyValuePair
+css.AnimationFillMode(s string) KeyValuePair
+css.AnimationPlayState(s string) KeyValuePair
+```
+
+**Lists:**
+```go
+css.ListStyle(s string) KeyValuePair
+css.ListStyleType(s string) KeyValuePair
+css.ListStylePosition(s string) KeyValuePair
+css.ListStyleImage(s string) KeyValuePair
+```
+
+**Tables:**
+```go
+css.TableLayout(s string) KeyValuePair
+css.CaptionSide(s string) KeyValuePair
+css.EmptyCells(s string) KeyValuePair
+```
+
+**User Interface:**
+```go
+css.Cursor(s string) KeyValuePair
+css.PointerEvents(s string) KeyValuePair
+css.UserSelect(s string) KeyValuePair
+css.Resize(s string) KeyValuePair
+css.Appearance(s string) KeyValuePair
+```
+
+**Scroll:**
+```go
+css.ScrollBehavior(s string) KeyValuePair
+css.ScrollSnapType(s string) KeyValuePair
+css.ScrollSnapAlign(s string) KeyValuePair
+css.ScrollPadding(s string) KeyValuePair
+css.ScrollMargin(s string) KeyValuePair
+css.OverscrollBehavior(s string) KeyValuePair
+```
+
+**Content:**
+```go
+css.Content(s string) KeyValuePair
+css.Quotes(s string) KeyValuePair
+css.CounterReset(s string) KeyValuePair
+css.CounterIncrement(s string) KeyValuePair
+```
+
+**Print:**
+```go
+css.PageBreakBefore(s string) KeyValuePair
+css.PageBreakAfter(s string) KeyValuePair
+css.PageBreakInside(s string) KeyValuePair
+```
+
+**Other:**
+```go
+css.AspectRatio(s string) KeyValuePair
+```
+
+---
+
+## Routing
+
+### Router Type
+
+```go
+type Router struct {
+    Route  string
+    routes map[string]RouteHandler
+}
+
+type RouteHandler func(State) []byte
+```
+
+### Router Methods
+
+```go
+router.Register(path string, handler RouteHandler)
+router.RenderRoute(state State) []byte
+router.RouteParam(param string) string  // Get query param value
+router.GetRoute() string
+router.SetNewRoute(route string)
+```
+
+### Routing Example
+
+```go
+func (m *Model) Init(sid uuid.UUID) gt.State {
+    model := &Model{sessionID: sid}
+
+    model.Register("/", homeHandler)
+    model.Register("/users", usersHandler)
+    model.Register("/settings", settingsHandler)
+
+    return model
+}
+
+func (m *Model) OnRouteChange(path string) {
+    // Parse query params
+    id := m.RouteParam("id")  // ?id=123
+
+    // Route-specific logic
+    if strings.HasPrefix(path, "/users") {
+        m.LoadUsers()
+    }
+}
+
+func (m *Model) Render() []byte {
+    return m.RenderRoute(m)
+}
+```
+
+---
+
+## Component Namespacing
+
+### ComponentID Type
+
+```go
+type ComponentID string
+
+func (c ComponentID) UniqueMsg(msg string) string         // "prefix_MSG"
+func (c ComponentID) UniqueID(id string) string           // "prefix-id"
+func (c ComponentID) UniqueMsgMap(m MessageMap) MessageMap
+func (c ComponentID) String() string
+
+// Message helpers
+func (c ComponentID) SendMessage(msg string, args any) string
+func (c ComponentID) SendMessageNoArgs(msg string) string
+func (c ComponentID) SendMessageWithValueFromInput(msg, inputID string) string
+func (c ComponentID) UpdateForm(msg, formID string) string
+```
+
+### Component Example
+
+```go
+// Define reusable component
+type SearchBox struct {
+    gt.ComponentID
+    Query   string
+    Results []string
+}
+
+// Create instances
+headerSearch := SearchBox{ComponentID: "header-search"}
+sidebarSearch := SearchBox{ComponentID: "sidebar-search"}
+
+// Register namespaced messages
+func (m *Model) Update() gt.MessageMap {
+    return gt.MergeMaps(
+        headerSearch.UniqueMsgMap(searchMessages),   // "header-search_SEARCH"
+        sidebarSearch.UniqueMsgMap(searchMessages),  // "sidebar-search_SEARCH"
+    )
+}
+
+var searchMessages = gt.MessageMap{
+    "SEARCH": func(msg gt.Message, s gt.State) gt.Response {
+        componentID := msg.GetComponentID()
+        // Handle based on which component sent the message
+        return gt.Respond()
+    },
+}
+
+// Render with namespaced IDs
+func (sb SearchBox) Render() h.Element {
+    return h.Div(a.Attrs(a.Id(sb.UniqueID("container"))),
+        h.Input(a.Attrs(
+            a.Id(sb.UniqueID("input")),
+            a.Value(sb.Query),
+            a.OnKeyUp(sb.SendMessageWithValueFromInput("SEARCH", sb.UniqueID("input"))),
+        )),
+    )
+}
+```
+
+---
+
+## Broadcasting
+
+```go
+var app *gt.Application
+
+func main() {
+    app = gt.NewApp(&Model{})
+    app.Start(8080, "static")
+}
+
+// In a message handler
+func broadcastHandler(msg gt.Message, s gt.State) gt.Response {
+    // Update state...
+    app.Broadcast()  // Re-render ALL connected sessions
+    return gt.Respond()
+}
+```
+
+---
+
+## Testing
+
+### TestSession Type
+
+```go
+type TestSession struct {
+    State gt.State
+    t     *testing.T
+}
+
+func NewSession(t *testing.T, model gt.State) *TestSession
+func (s *TestSession) Dispatch(msgName string, args any) *TestSession
+func (s *TestSession) Render() string
+func (s *TestSession) GetState() gt.State
+```
+
+### Testing Example
+
+```go
+import "github.com/jpincas/go-tea/tester"
+
+func TestCounter(t *testing.T) {
+    session := tester.NewSession(t, &Model{})
+
+    // IMPORTANT: JSON numbers are float64
+    session.Dispatch("INCREMENT", float64(5))
+    session.Dispatch("INCREMENT", float64(-2))
+
+    state := session.GetState().(*Model)
+    if state.Counter != 3 {
+        t.Errorf("Expected 3, got %d", state.Counter)
+    }
+}
+
+func TestFormUpdate(t *testing.T) {
+    session := tester.NewSession(t, &Model{})
+
+    // String args
+    session.Dispatch("UPDATE_NAME", "John")
+
+    state := session.GetState().(*Model)
+    if state.Name != "John" {
+        t.Errorf("Expected John, got %s", state.Name)
+    }
+}
+
+func TestComplexArgs(t *testing.T) {
+    session := tester.NewSession(t, &Model{})
+
+    // Struct args (will be JSON encoded/decoded)
+    session.Dispatch("UPDATE_USER", map[string]interface{}{
+        "name": "John",
+        "age":  float64(30),  // JSON numbers are float64
+    })
+}
+
+func TestRender(t *testing.T) {
+    session := tester.NewSession(t, &Model{})
+    session.Dispatch("INCREMENT", float64(1))
+
+    html := session.Render()
+    if !strings.Contains(html, "1") {
+        t.Error("Counter not rendered")
+    }
+}
+```
+
+---
+
+## Application Setup
+
+### Application Type
+
+```go
+type Application struct {
+    *melody.Melody
+    Model State
+}
+
+func NewApp(model State) *Application
+func (app *Application) Start(port int, staticDir string)
+func (app *Application) Broadcast()
+```
+
+### Complete Setup
+
+```go
+func main() {
+    app := gt.NewApp(&Model{})
+    app.Start(8080, "static")
+    // Serves:
+    // - WebSocket at /server
+    // - Static files at /static/
+    // - All other routes render through State.Render()
+}
+```
+
+---
+
+## Gotchas and Common Mistakes
+
+1. **JSON numbers are float64**
+   ```go
+   // Wrong
+   n := msg.Arguments.(int)
+
+   // Correct
+   n := msg.ArgsToInt()
+   // or
+   f := msg.Arguments.(float64)
+   n := int(f)
+   ```
+
+2. **Must embed gt.Router**
+   ```go
+   // Wrong
+   type Model struct {
+       Counter int
+   }
+
+   // Correct
+   type Model struct {
+       gt.Router
+       Counter int
+   }
+   ```
+
+3. **Register routes in Init(), not at package level**
+   ```go
+   // Wrong - routes is nil
+   var routes = map[string]func(){}
+
+   // Correct
+   func (m *Model) Init(sid uuid.UUID) gt.State {
+       model := &Model{}
+       model.Register("/", handler)
+       return model
+   }
+   ```
+
+4. **Use pointer receivers for State methods**
+   ```go
+   // Wrong
+   func (m Model) Update() gt.MessageMap
+
+   // Correct
+   func (m *Model) Update() gt.MessageMap
+   ```
+
+5. **DelayedNextMsg runs in goroutine**
+   - State mutations in chained messages are concurrent
+   - Use mutex if accessing shared resources
+
+6. **Component ID separators differ**
+   - `UniqueMsg("SELECT")` → `"component_SELECT"` (underscore)
+   - `UniqueID("input")` → `"component-input"` (hyphen)
+
+7. **Messages convention: SCREAMING_SNAKE_CASE**
+   ```go
+   "INCREMENT_COUNTER"  // Good
+   "incrementCounter"   // Works but not conventional
+   ```
+
+8. **Test with float64 for numeric args**
+   ```go
+   // Wrong
+   session.Dispatch("INCREMENT", 1)
+
+   // Correct
+   session.Dispatch("INCREMENT", float64(1))
+   ```
+
+---
+
+## Project Structure
+
+```
+/                       # Core library (import as gt "github.com/jpincas/go-tea")
+  runtime.go           # Application, State, Message, Response, Router
+  component.go         # ComponentID namespacing
+  templatehelpers.go   # SendBasicMessage, etc.
+
+/html                  # import h "github.com/jpincas/go-tea/html"
+  element.go           # Element, Elements types
+  tags.go              # All HTML/SVG tag constructors
+
+/attributes            # import a "github.com/jpincas/go-tea/attributes"
+  attrs.go             # Attribute, Attributes types
+  constructors.go      # All attribute constructors
+
+/css                   # import "github.com/jpincas/go-tea/css"
+  styles.go            # CSS property functions, constants
+
+/tester                # import "github.com/jpincas/go-tea/tester"
+  tester.go            # TestSession for unit testing
+
+/js
+  gotea.js             # Client-side: WebSocket, morphdom, routing
+
+/example               # Demo application
+```
+
+---
+
+## Running
+
+```bash
+# Run example
+cd example && go run .
+# Visit http://localhost:8080
+
+# Run tests
+go test ./...
+cd example && go test ./...
+```
+
+---
+
+## Dependencies
+
+- `github.com/olahol/melody` - WebSocket handling
+- `github.com/google/uuid` - Session IDs
+- morphdom (bundled in gotea.js) - Efficient DOM patching
