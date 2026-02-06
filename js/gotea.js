@@ -162,7 +162,7 @@ const updateFormState = (msg, formID) => {
 // Serialize form data into an object
 const serializeForm = formID => {
   const formElements = [...document.getElementById(formID).elements];
-  const TEXT_INPUT = "text";
+  const TEXT_TYPES = ["text", "email", "number", "tel", "url", "password", "search", "date", "datetime-local", "time", "month", "week", "color", "range", "hidden"];
   const CHECKBOX = "checkbox";
   const RADIO = "radio";
   const SELECT = "SELECT";
@@ -184,10 +184,9 @@ const serializeForm = formID => {
         acc[el.name] = el.value;
         break;
     }
-    switch (el.type) {
-      case TEXT_INPUT:
-        acc[el.name] = el.value;
-        break;
+    if (TEXT_TYPES.includes(el.type)) {
+      acc[el.name] = el.value;
+    } else switch (el.type) {
       case CHECKBOX:
         acc[el.name] = el.checked;
         break;
