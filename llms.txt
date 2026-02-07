@@ -312,6 +312,38 @@ func TestCounter(t *testing.T) {
 }
 ```
 
+## Client-Side Hooks
+
+### Skipping morphdom updates (`data-morph-skip`)
+
+Add `data-morph-skip` to any DOM element to prevent morphdom from updating it or its children. This is useful when client-side JS transforms an element (e.g., rendering a diagram library) and you don't want server re-renders to clobber the result.
+
+```html
+<div class="mermaid" data-morph-skip><!-- rendered SVG lives here --></div>
+```
+
+Set the attribute from JS after your client-side rendering is complete:
+```js
+element.setAttribute('data-morph-skip', '');
+```
+
+The `onBeforeElUpdated` hook checks for this attribute and returns `false`, skipping the element entirely.
+
+### After-render callback (`_afterRender`)
+
+Register a callback on `window.gotea._afterRender` to run code after every morphdom patch. This replaces the need for a MutationObserver to detect DOM changes from server re-renders.
+
+```js
+window.gotea = window.gotea || {};
+window.gotea._afterRender = function() {
+    // Re-initialize client-side components after morphdom patch
+    initAnnotationCanvas();
+    checkScrollPosition();
+};
+```
+
+The callback fires synchronously after morphdom completes, once per server re-render.
+
 ## Gotchas
 
 1. **JSON numbers are float64** - Use `m.ArgsToInt()` not direct type assertion. In tests, pass `float64(1)` not `1`.
@@ -322,6 +354,7 @@ func TestCounter(t *testing.T) {
 6. **morphdom preserves focus** - Input focus and selection survive re-renders.
 7. **Messages are SCREAMING_SNAKE_CASE** - Convention for message naming.
 8. **Component separators differ** - Messages use `_` (UniqueMsg), IDs use `-` (UniqueID).
+9. **Client-side rendered content gets clobbered** - morphdom replaces elements to match server HTML. If JS transforms an element (diagrams, canvases), use `data-morph-skip` to protect it, or use `_afterRender` to re-initialize after each patch.
 
 ## Project Structure
 

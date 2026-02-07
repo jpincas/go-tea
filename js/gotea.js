@@ -67,8 +67,13 @@ function connect() {
 
     console.log("Received rerender from server");
     morphdom(document.documentElement, event.data, {
-      childrenOnly: true
+      childrenOnly: true,
+      onBeforeElUpdated: function(fromEl, toEl) {
+        if (fromEl.hasAttribute('data-morph-skip')) return false;
+        return true;
+      }
     });
+    if (window.gotea && window.gotea._afterRender) window.gotea._afterRender();
   };
 
   socket.onopen = () => {
